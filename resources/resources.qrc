@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/ComfyUI_00292_.png</file>
+        <file>images/ComfyUI_00301_.png</file>
+        <file>images/t2i_demo.gif</file>
+        <file>images/HideConversation.png</file>
+	<file>images/historypic.png</file>
+	<file>images/loading.gif</file>
+    </qresource>
+
+    <!-- 新增：工作流模板资源 -->
+    <qresource prefix="/workflows">
+        <file alias="t2i">workflows/Z-Image文生图.json</file>
+    	<file alias="vision">workflows/i2i_vision.json</file>
+    	<file alias="render">workflows/i2i_render.json</file>
+	<file alias="upscale">workflows/高清修复.json</file>
+    </qresource>
+</RCC>

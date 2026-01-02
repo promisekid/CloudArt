@@ -1,0 +1,71 @@
+{
+  "1": {
+    "inputs": {
+      "model_name": "Huihui-Qwen3-VL-8B-Instruct-abliterated",
+      "quantization": "4-bit (VRAM-friendly)",
+      "attention_mode": "sdpa",
+      "preset_prompt": "🖼️ Detailed Description",
+      "custom_prompt": "请分析这张图片，生成用于AI绘画的写实风格中文提示词，严格按照以下要求输出：\n1. 主体细节：提取图片核心主体（人物/物体/场景），若为二次元图片，需将夸张特征转化为写实细节（如动漫大眼睛改为自然眼型，简化发型转为真实发质），细化描述性别、年龄、服饰、姿态、表情等特征。\n2. 场景环境：详细描述背景场景（室内/户外/城市/自然），补充写实化细节（如老旧墙壁的斑驳纹理、阳光透过树叶的光斑、地面的水渍），二次元场景需替换为现实中对应的真实场景。\n3. 光影氛围：明确光源方向（侧光/逆光/顶光）、光线强度（柔和/强烈）、色调（冷色调/暖色调），营造写实氛围（静谧、紧张、温馨、电影感）。\n4. 材质质感：描述主体和场景的材质细节（丝绸衣物的光泽、金属的反光、皮肤的毛孔、岩石的粗糙纹理、布料的褶皱）。\n5. 画质参数：添加写实摄影关键词（8K分辨率、高清、细节拉满、锐利对焦、高对比度、专业级画质）。\n6. 格式要求：直接输出中文提示词，用中文逗号分隔，按「主体→场景→光影→材质→画质」的顺序排列，无需任何解释性文字，确保可直接用于zimage生成写实图片。",
+      "max_tokens": 1024,
+      "keep_model_loaded": false,
+      "seed": 2293362220,
+      "image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "AILab_QwenVL",
+    "_meta": {
+      "title": "QwenVL"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "011f4ac2b959b7875cad923fcd97cd86_720.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "4": {
+    "inputs": {
+      "preview": "",
+      "previewMode": null,
+      "source": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "预览任意"
+    }
+  },
+  "6": {
+    "inputs": {
+      "mode": "Long Edge Limit",
+      "target_value": 1024,
+      "image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "MySmartResize",
+    "_meta": {
+      "title": "🛠️ My Smart Resize"
+    }
+  },
+  "7": {
+    "inputs": {
+      "anything": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "清理显存占用"
+    }
+  }
+}

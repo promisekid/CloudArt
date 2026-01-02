@@ -1,0 +1,4688 @@
+文件夹 'CloudArt' 的层级结构:
+
+└── CloudArt/
+    ├── CMakeLists.txt
+    ├── output.txt
+    └── .qtcreator/
+        ├── CMakeLists.txt.user
+        └── qtc-cmake-presets-bvhIHIpF/
+        └── qtc-cmake-presets-OtlCeNgn/
+        └── qtc-cmake-presets-XZNvAZIY/
+        └── qtc-cmake-presets-ZvFdVnmy/
+    └── resources/
+        ├── resources.qrc
+        └── images/
+            ├── 426DAA5942BF4BCE235CD3004582BC3A.png
+            ├── ComfyUI_00292_.png
+            ├── ComfyUI_00301_.png
+            ├── HideConversation.png
+            ├── historypic.png
+            ├── loading.gif
+            ├── t2i_demo.gif
+        └── workflows/
+            ├── i2i_render.json
+            ├── i2i_vision.json
+            ├── Z-Image文生图.json
+            ├── 高清修复.json
+    └── src/
+        ├── CMakeLists.txt
+        ├── main.cpp
+        └── Core/
+            ├── WorkflowManager.cpp
+            ├── WorkflowManager.h
+        └── Model/
+            ├── WorkflowTypes.h
+        └── Network/
+            ├── ComfyApiService.cpp
+            ├── ComfyApiService.h
+        └── Ui/
+            ├── MainWindow.cpp
+            ├── MainWindow.h
+            └── Components/
+                ├── ChatArea.cpp
+                ├── ChatArea.h
+                ├── ChatBubble.cpp
+                ├── ChatBubble.h
+                ├── ImageViewer.cpp
+                ├── ImageViewer.h
+                ├── InputPanel.cpp
+                ├── InputPanel.h
+                ├── ReferencePopup.cpp
+                ├── ReferencePopup.h
+                ├── SessionItem.cpp
+                ├── SessionItem.h
+                ├── SessionList.cpp
+                ├── SessionList.h
+                ├── WorkflowCard.cpp
+                ├── WorkflowCard.h
+                ├── WorkflowSelector.cpp
+                ├── WorkflowSelector.h
+
+================================================================================
+
+--- 文件开始: CMakeLists.txt ---
+
+cmake_minimum_required(VERSION 3.16)
+
+# 项目名称和版本
+project(CloudArt VERSION 0.1 LANGUAGES CXX)
+
+# 设置 C++ 标准 (C++17 是现代 Qt6 开发的标配)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Qt 核心设置：自动处理元对象系统(MOC)、资源(RCC)和UI文件(UIC)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+# 查找 Qt6 组件 (核心组件、界面组件、网络组件)
+find_package(Qt6 COMPONENTS Widgets Network WebSockets REQUIRED)
+
+# 添加子目录 (将构建逻辑下放到 src 文件夹)
+add_subdirectory(src)
+
+
+--- 文件结束: CMakeLists.txt ---
+
+--- 文件开始: output.txt ---
+
+
+
+--- 文件结束: output.txt ---
+
+--- 文件开始: resources\workflows\i2i_render.json ---
+
+{
+  "3": {
+    "inputs": {
+      "seed": 275879196400549,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "sgm_uniform",
+      "denoise": 1,
+      "model": [
+        "51",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "70",
+        0
+      ],
+      "latent_image": [
+        "53",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "一位年轻女性，约17-19岁，东亚面孔，长直黑发带齐刘海，眼神专注略带慵懒，嘴唇微张含着一根细木签；身穿黑色校服外套搭配红色领结与深色百褶裙，内搭白色衬衫，下身穿着白色短袜配皮鞋，外套有破洞设计，衣摆随动作飘动；身体斜倚在水泥台阶上，右腿抬起呈半坐姿，左手轻扶阶沿，右手持木签靠近唇边，整体姿态放松而富有动感；身处现代都市街头阶梯旁，两侧是贴满日文广告牌的城市建筑墙面，石阶表面因风化显出灰白颗粒与污迹，远处可见高楼玻璃幕墙反射天光；顶部偏左强光照射形成明暗过渡，阴影落在腿部与台阶缝隙处，画面主调为中性冷灰色系但局部受光区域泛暖黄，增强立体感；肌肤呈现细腻哑光质感，毛发根部清晰可见，衣物纤维纹路分明，皮革鞋面有油润反光，混凝土台阶粗粝多孔且沾染尘土痕迹；8K超清画质，极致细节拉满，镜头锐利聚焦于面部与手部特写，高动态范围对比度，专业级写实摄影效果",
+      "clip": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "comfyuii2i",
+      "images": [
+        "80",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "17": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "30": {
+    "inputs": {
+      "image": "pasted/image (22).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "34": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "lumina2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "35": {
+    "inputs": {
+      "unet_name": "zImage_turbo.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "50": {
+    "inputs": {
+      "name": "Z-Image-Turbo-Fun-Controlnet-Union-2.1.safetensors"
+    },
+    "class_type": "ModelPatchLoader",
+    "_meta": {
+      "title": "ModelPatchLoader"
+    }
+  },
+  "51": {
+    "inputs": {
+      "strength": 0.8,
+      "model": [
+        "35",
+        0
+      ],
+      "model_patch": [
+        "50",
+        0
+      ],
+      "vae": [
+        "17",
+        0
+      ],
+      "image": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "QwenImageDiffsynthControlnet",
+    "_meta": {
+      "title": "QwenImageDiffsynthControlnet"
+    }
+  },
+  "52": {
+    "inputs": {
+      "preprocessor": "DepthAnythingV2Preprocessor",
+      "resolution": 1024,
+      "image": [
+        "83",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "53": {
+    "inputs": {
+      "width": [
+        "54",
+        0
+      ],
+      "height": [
+        "54",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "空Latent图像"
+    }
+  },
+  "54": {
+    "inputs": {
+      "image": [
+        "83",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "获取图像尺寸"
+    }
+  },
+  "69": {
+    "inputs": {
+      "images": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "70": {
+    "inputs": {
+      "conditioning": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "71": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "80": {
+    "inputs": {
+      "anything": [
+        "71",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "清理显存占用"
+    }
+  },
+  "83": {
+    "inputs": {
+      "mode": "Megapixel Limit",
+      "target_value": 1024,
+      "image": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "MySmartResize",
+    "_meta": {
+      "title": "🛠️ My Smart Resize"
+    }
+  }
+}
+
+--- 文件结束: resources\workflows\i2i_render.json ---
+
+--- 文件开始: resources\workflows\i2i_vision.json ---
+
+{
+  "1": {
+    "inputs": {
+      "model_name": "Huihui-Qwen3-VL-8B-Instruct-abliterated",
+      "quantization": "4-bit (VRAM-friendly)",
+      "attention_mode": "sdpa",
+      "preset_prompt": "🖼️ Detailed Description",
+      "custom_prompt": "请分析这张图片，生成用于AI绘画的写实风格中文提示词，严格按照以下要求输出：\n1. 主体细节：提取图片核心主体（人物/物体/场景），若为二次元图片，需将夸张特征转化为写实细节（如动漫大眼睛改为自然眼型，简化发型转为真实发质），细化描述性别、年龄、服饰、姿态、表情等特征。\n2. 场景环境：详细描述背景场景（室内/户外/城市/自然），补充写实化细节（如老旧墙壁的斑驳纹理、阳光透过树叶的光斑、地面的水渍），二次元场景需替换为现实中对应的真实场景。\n3. 光影氛围：明确光源方向（侧光/逆光/顶光）、光线强度（柔和/强烈）、色调（冷色调/暖色调），营造写实氛围（静谧、紧张、温馨、电影感）。\n4. 材质质感：描述主体和场景的材质细节（丝绸衣物的光泽、金属的反光、皮肤的毛孔、岩石的粗糙纹理、布料的褶皱）。\n5. 画质参数：添加写实摄影关键词（8K分辨率、高清、细节拉满、锐利对焦、高对比度、专业级画质）。\n6. 格式要求：直接输出中文提示词，用中文逗号分隔，按「主体→场景→光影→材质→画质」的顺序排列，无需任何解释性文字，确保可直接用于zimage生成写实图片。",
+      "max_tokens": 1024,
+      "keep_model_loaded": false,
+      "seed": 2293362220,
+      "image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "AILab_QwenVL",
+    "_meta": {
+      "title": "QwenVL"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "011f4ac2b959b7875cad923fcd97cd86_720.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "4": {
+    "inputs": {
+      "preview": "",
+      "previewMode": null,
+      "source": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "预览任意"
+    }
+  },
+  "6": {
+    "inputs": {
+      "mode": "Long Edge Limit",
+      "target_value": 1024,
+      "image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "MySmartResize",
+    "_meta": {
+      "title": "🛠️ My Smart Resize"
+    }
+  },
+  "7": {
+    "inputs": {
+      "anything": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "清理显存占用"
+    }
+  }
+}
+
+--- 文件结束: resources\workflows\i2i_vision.json ---
+
+--- 文件开始: resources\workflows\Z-Image文生图.json ---
+
+{
+  "3": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "4": {
+    "inputs": {
+      "seed": 859214507156335,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "23",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "25",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "一张极具压迫感的8k超高清人像摄影，采用极端的**虫视视角（Ant's eye view）**仰拍。画面呈现超现实的透视感，前景是巨大的足底特写，具有强烈的视觉冲击力。全焦段清晰（Deep focus），确保前景的脚部与后方的人物面部均清晰可见。\n一位身穿深蓝色水手服的年轻女性Coser，坐在极简风格的皮质高背椅上。姿势具有挑战性：双腿高高抬起伸向镜头，赤裸的右脚足底占据画面前景核心位置，展现出细腻的皮肤纹理和足弓形态；左腿此时穿着黑色半透明网袜，与右脚形成强烈质感对比。她的一只手慵懒地托着下巴，眼神自上而下玩味地俯视镜头。\n极其逼真的皮肤质感，面部保留真实的微细毛孔，不磨皮。琥珀色的瞳孔在逆光下透亮。室内窗边场景，午后的硬阳光（Hard light）从侧后方射入，空气中漂浮着尘埃粒子（丁达尔效应）。光线在黑发边缘勾勒出金色的轮廓光（Rim light）。\n电影级布光，RAW原片质感，锐度极高，每一个衣褶的织物纹理、指甲边缘、网袜的网格细节都清晰可辨。",
+      "clip": [
+        "24",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码"
+    }
+  },
+  "7": {
+    "inputs": {
+      "width": 720,
+      "height": 1080,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "空Latent图像"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "4",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "20": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "23": {
+    "inputs": {
+      "unet_name": "zImage_turbo.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "24": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "25": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "24",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码"
+    }
+  },
+  "29": {
+    "inputs": {
+      "anything": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "清理显存占用"
+    }
+  }
+}
+
+--- 文件结束: resources\workflows\Z-Image文生图.json ---
+
+--- 文件开始: resources\workflows\高清修复.json ---
+
+{
+  "1": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "2": {
+    "inputs": {
+      "seed": 580323588,
+      "resolution": 1536,
+      "max_resolution": 0,
+      "batch_size": 1,
+      "uniform_batch_size": false,
+      "color_correction": "wavelet",
+      "temporal_overlap": 0,
+      "prepend_frames": 0,
+      "input_noise_scale": 0,
+      "latent_noise_scale": 0,
+      "offload_device": "cpu",
+      "enable_debug": false,
+      "image": [
+        "6",
+        0
+      ],
+      "dit": [
+        "4",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "SeedVR2VideoUpscaler",
+    "_meta": {
+      "title": "SeedVR2 Video Upscaler (v2.5.22)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "cuda:0",
+      "encode_tiled": false,
+      "encode_tile_size": 1024,
+      "encode_tile_overlap": 128,
+      "decode_tiled": false,
+      "decode_tile_size": 1024,
+      "decode_tile_overlap": 128,
+      "tile_debug": "false",
+      "offload_device": "cpu",
+      "cache_model": false
+    },
+    "class_type": "SeedVR2LoadVAEModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load VAE Model"
+    }
+  },
+  "4": {
+    "inputs": {
+      "model": "seedvr2_ema_7b-Q4_K_M.gguf",
+      "device": "cuda:0",
+      "blocks_to_swap": 32,
+      "swap_io_components": false,
+      "offload_device": "cpu",
+      "cache_model": false,
+      "attention_mode": "sdpa"
+    },
+    "class_type": "SeedVR2LoadDiTModel",
+    "_meta": {
+      "title": "SeedVR2 (Down)Load DiT Model"
+    }
+  },
+  "5": {
+    "inputs": {
+      "anything": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "easy cleanGpuUsed",
+    "_meta": {
+      "title": "清理显存占用"
+    }
+  },
+  "6": {
+    "inputs": {
+      "image": "comfyuii2i_00140_.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  }
+}
+
+--- 文件结束: resources\workflows\高清修复.json ---
+
+--- 文件开始: src\CMakeLists.txt ---
+
+# 定义源代码文件列表
+set(SOURCES
+    main.cpp
+    Ui/MainWindow.h
+    Ui/MainWindow.cpp
+
+    #Core
+    Core/WorkflowManager.h
+    Core/WorkflowManager.cpp
+
+    # Model
+    Model/WorkflowTypes.h
+
+    # Network
+    Network/ComfyApiService.h
+    Network/ComfyApiService.cpp
+
+    # Components
+    Ui/Components/SessionList.h
+    Ui/Components/SessionList.cpp
+    Ui/Components/ChatArea.h
+    Ui/Components/ChatArea.cpp
+    Ui/Components/InputPanel.h
+    Ui/Components/InputPanel.cpp
+    Ui/Components/WorkflowSelector.h
+    Ui/Components/WorkflowSelector.cpp
+    Ui/Components/WorkflowCard.h
+    Ui/Components/WorkflowCard.cpp
+    Ui/Components/ReferencePopup.h
+    Ui/Components/ReferencePopup.cpp
+    Ui/Components/SessionItem.h
+    Ui/Components/SessionItem.cpp
+    Ui/Components/ChatBubble.h
+    Ui/Components/ChatBubble.cpp
+    Ui/Components/ImageViewer.h
+    Ui/Components/ImageViewer.cpp
+    ../resources/resources.qrc
+)
+
+# 定义可执行文件
+add_executable(CloudArt ${SOURCES})
+
+# 链接 Qt 库
+target_link_libraries(CloudArt PRIVATE
+    Qt6::Widgets
+    Qt6::Network
+    Qt6::WebSockets
+)
+
+# 设置 Windows 子系统 (避免运行时弹出黑色 cmd 窗口，但在开发调试期可以先注释掉下面这行)
+# set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)
+
+
+--- 文件结束: src\CMakeLists.txt ---
+
+--- 文件开始: src\main.cpp ---
+
+/**
+ * @file main.cpp
+ * @brief 应用程序主入口文件
+ * 
+ * 该文件包含应用程序的main函数，负责初始化Qt应用程序、
+ * 设置应用元数据、创建主窗口并启动事件循环。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#include <QApplication>
+#include "Ui/MainWindow.h"
+
+/**
+ * @brief 应用程序主入口函数
+ * 
+ * 初始化Qt应用程序，设置应用属性，创建主窗口并启动事件循环。
+ * 
+ * @param argc 命令行参数数量
+ * @param argv 命令行参数数组
+ * @return int 应用程序退出码
+ */
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+
+    // 设置应用元数据
+    app.setApplicationName("CloudArt");
+    app.setApplicationDisplayName("CloudArt - AI Client");
+
+    // 创建并显示主窗口
+    MainWindow window;
+    window.show();
+
+    return app.exec();
+}
+
+--- 文件结束: src\main.cpp ---
+
+--- 文件开始: src\Core\WorkflowManager.cpp ---
+
+#include "WorkflowManager.h"
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QDebug>
+
+WorkflowManager::WorkflowManager(QObject *parent) : QObject(parent)
+{
+}
+
+QJsonObject WorkflowManager::loadTemplate(const QString& resourcePath)
+{
+    QFile file(resourcePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "❌ 无法加载工作流模板:" << resourcePath;
+        return QJsonObject();
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (doc.isNull()) {
+        qDebug() << "❌ 工作流模板 JSON 格式错误:" << resourcePath;
+        return QJsonObject();
+    }
+
+    return doc.object();
+}
+
+QJsonObject WorkflowManager::buildWorkflow(WorkflowType type, const QMap<QString, QVariant>& params)
+{
+    QJsonObject workflow;
+
+    // 1. 根据类型选择模板文件
+    if (type == WorkflowType::TextToImage) {
+        // 使用我们在 .qrc 里定义的别名
+        workflow = loadTemplate(":/workflows/t2i");
+    }
+    // ... 未来处理其他类型 ...
+
+    if (workflow.isEmpty()) return QJsonObject();
+
+    // 2. 替换参数 (基于你的 Z-Image 模板结构)
+
+    // --- 替换提示词 (Node 5) ---
+    // 你的模板里，TextEncode 节点的 ID 是 "5"
+    if (params.contains("prompt") && workflow.contains("5")) {
+        QJsonObject node = workflow["5"].toObject();
+        QJsonObject inputs = node["inputs"].toObject();
+
+        inputs["text"] = params["prompt"].toString();
+
+        node["inputs"] = inputs;
+        workflow["5"] = node; // 更新回去
+    }
+
+    // --- 替换种子 (Node 4) ---
+    // 你的模板里，KSampler 节点的 ID 是 "4"
+    if (params.contains("seed") && workflow.contains("4")) {
+        QJsonObject node = workflow["4"].toObject();
+        QJsonObject inputs = node["inputs"].toObject();
+
+        // 注意：JSON 中的数字在 Qt 中对应 double 或 long long
+        inputs["seed"] = params["seed"].toLongLong();
+
+        node["inputs"] = inputs;
+        workflow["4"] = node; // 更新回去
+    }
+
+    return workflow;
+}
+
+
+--- 文件结束: src\Core\WorkflowManager.cpp ---
+
+--- 文件开始: src\Core\WorkflowManager.h ---
+
+#pragma once
+#include <QObject>
+#include <QJsonObject>
+#include <QMap>
+#include <QVariant>
+#include "../Model/WorkflowTypes.h"
+
+class WorkflowManager : public QObject
+{
+    Q_OBJECT
+public:
+    explicit WorkflowManager(QObject *parent = nullptr);
+
+    /**
+     * @brief 构建工作流 JSON
+     * @param type 工作流类型 (例如 TextToImage)
+     * @param params 用户输入的参数 (例如 prompt, seed)
+     * @return 准备好发送给 API 的 JSON 对象
+     */
+    QJsonObject buildWorkflow(WorkflowType type, const QMap<QString, QVariant>& params);
+
+private:
+    // 加载资源文件中的 JSON
+    QJsonObject loadTemplate(const QString& resourcePath);
+};
+
+
+--- 文件结束: src\Core\WorkflowManager.h ---
+
+--- 文件开始: src\Model\WorkflowTypes.h ---
+
+/**
+ * @file WorkflowTypes.h
+ * @brief 工作流类型定义头文件
+ * 
+ * 该文件定义了工作流相关的枚举类型和数据结构。
+ * 包含工作流类型枚举和工作流信息结构体定义。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+
+#include <QString>
+
+/**
+ * @brief 工作流类型枚举
+ * 
+ * 定义了应用程序支持的所有工作流类型。
+ */
+enum class WorkflowType {
+    TextToImage = 1,      ///< 文生图
+    ImageToImage = 2,     ///< 图生图
+    Inpaint = 3,          ///< 局部重绘
+    Upscale = 4,          ///< 图像放大
+    StyleTransfer = 5,    ///< 风格转换
+    PortraitEnhance = 6,  ///< 人像美化
+    BackgroundRemove = 7, ///< 背景移除
+    ColorCorrection = 8   ///< 色彩校正
+};
+
+/**
+ * @brief 工作流信息结构体
+ * 
+ * 包含单个工作流的完整信息，用于界面显示和功能处理。
+ */
+struct WorkflowInfo {
+    int id; ///< 工作流唯一标识符
+    QString name; ///< 工作流名称
+    QString imagePath; ///< 工作流图标路径
+    QString gifPath; ///< 工作流动画路径（可选）
+    QString description; ///< 工作流描述（可选）
+    WorkflowType type; ///< 工作流类型
+    
+    /**
+     * @brief 构造函数
+     * @param id 工作流ID
+     * @param name 工作流名称
+     * @param imagePath 图标路径
+     * @param gifPath 动画路径（可选，默认为空）
+     * @param description 描述信息（可选，默认为空）
+     * @param type 工作流类型（可选，默认为文生图）
+     */
+    WorkflowInfo(int id, const QString& name, const QString& imagePath, 
+                 const QString& gifPath = "", const QString& description = "", WorkflowType type = WorkflowType::TextToImage)
+        : id(id), name(name), imagePath(imagePath), gifPath(gifPath), description(description), type(type) {}
+};
+
+--- 文件结束: src\Model\WorkflowTypes.h ---
+
+--- 文件开始: src\Network\ComfyApiService.cpp ---
+
+#include "ComfyApiService.h"
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>   // 解析数组需要
+#include <QUrl>
+#include <QUrlQuery>    // 【关键修复】
+#include <QDebug>
+#include <QWebSocket>
+
+ComfyApiService::ComfyApiService(QObject *parent)
+    : QObject(parent)
+{
+    // 1. 初始化网络管理器 (用于后续发 HTTP POST 请求)
+    m_networkManager = new QNetworkAccessManager(this);
+
+    // 2. 初始化 WebSocket (用于监听服务器发回的进度消息)
+    m_webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    // 3. 连接 WebSocket 的基础信号
+    // 当 socket 连接成功时 -> 转发我们的 serverConnected 信号
+    connect(m_webSocket, &QWebSocket::connected, this, [=](){
+        qDebug() << "WebSocket Connected!";
+        emit serverConnected();
+    });
+
+    // 当 socket 断开时 -> 转发 serverDisconnected
+    connect(m_webSocket, &QWebSocket::disconnected, this, [=](){
+        qDebug() << "WebSocket Disconnected!";
+        emit serverDisconnected();
+    });
+
+    // 当 socket 出错时 -> 打印错误并转发
+    // 注意：error 信号在 Qt6 中可能有重载，使用 lambda 接收 QAbstractSocket::SocketError
+    typedef void (QWebSocket::*ErrorSignal)(QAbstractSocket::SocketError);
+    connect(m_webSocket, static_cast<ErrorSignal>(&QWebSocket::errorOccurred),
+            this, [=](QAbstractSocket::SocketError error){
+        Q_UNUSED(error);
+        qDebug() << "WebSocket Error:" << m_webSocket->errorString();
+        emit errorOccurred(m_webSocket->errorString());
+    });
+
+    // 【新增】连接收到消息的信号
+    connect(m_webSocket, &QWebSocket::textMessageReceived,
+            this, &ComfyApiService::onTextMessageReceived);
+
+    // 【修改 1】生成一个唯一的 UUID 作为身份证
+    // 格式类似：{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+    m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    qDebug() << "客户端 ID 已生成:" << m_clientId;
+}
+
+ComfyApiService::~ComfyApiService()
+{
+    // socket 和 networkManager 指定了 parent 为 this，析构时会自动清理
+    // 但为了优雅退出，可以在这里手动 close 一下
+    if (m_webSocket) {
+        m_webSocket->close();
+    }
+}
+
+void ComfyApiService::connectToHost(const QString& address, int port)
+{
+    // 保存 HTTP 地址 (注意没有 /ws 后缀)
+    m_serverAddress = QString("http://%1:%2").arg(address).arg(port);
+
+    // 【修改 2】在 URL 后面加上 ?clientId=xxx
+    // 注意：wsUrl 是 ws://127.0.0.1:8188/ws?clientId=xxxx
+    QString wsUrl = QString("ws://%1:%2/ws?clientId=%3")
+                        .arg(address)
+                        .arg(port)
+                        .arg(m_clientId);
+
+    qDebug() << "Connecting WebSocket with ID:" << wsUrl;
+
+    m_webSocket->close();
+    m_webSocket->open(QUrl(wsUrl));
+}
+
+void ComfyApiService::queuePrompt(const QJsonObject& workflow)
+{
+    // 1. 构造请求 URL: http://127.0.0.1:8188/prompt
+    QUrl url(m_serverAddress + "/prompt");
+    QNetworkRequest request(url);
+
+    // 2. 设置头信息 (告诉服务器我们要发 JSON)
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    // 3. 构造发送的数据包
+    // ComfyUI 要求格式: { "prompt": { ...工作流节点... } }
+    QJsonObject payload;
+    payload["prompt"] = workflow;
+    // client_id 最好加上，用于区分是谁发的，这里暂时先不加，后面再完善
+
+    // 【修改 3】告诉服务器：这个任务是 m_clientId 发起的
+    // 这样服务器执行完后，就会把 executed 消息发回给这个 ID 对应的 WebSocket
+    payload["client_id"] = m_clientId;
+
+    QByteArray data = QJsonDocument(payload).toJson();
+
+    qDebug() << "Posting prompt (Client ID:" << m_clientId << ")...";
+    QNetworkReply* reply = m_networkManager->post(request, data);
+
+    connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onPostFinished);
+}
+
+void ComfyApiService::onPostFinished()
+{
+    // 获取触发这个槽的 reply 对象
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        // 请求成功！
+        QByteArray response = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(response);
+        QJsonObject obj = doc.object();
+
+        // ComfyUI 会返回 {"prompt_id": "xxx", "number": ...}
+        QString promptId = obj["prompt_id"].toString();
+
+        // 【新增】保存这个 ID，后面收到消息时核对是不是我们发的
+        m_currentPromptId = promptId;
+
+        qDebug() << "✅ 任务发送成功! ID:" << promptId;
+
+        emit promptQueued(promptId);
+    } else {
+        // 请求失败
+        QString err = "发送任务失败: " + reply->errorString();
+        qDebug() << "❌" << err;
+        emit errorOccurred(err);
+    }
+
+    reply->deleteLater(); // 记得清理内存
+}
+
+
+void ComfyApiService::onTextMessageReceived(const QString &message)
+{
+    // 【调试 1】打印收到的原始消息（看看有没有数据进来）
+    // 注意：如果消息太长刷屏，测试完记得注释掉
+    // qDebug() << "收到WS消息:" << message;
+
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+    QJsonObject root = doc.object();
+
+    QString msgType = root["type"].toString();
+    QJsonObject data = root["data"].toObject();
+
+    // 过滤掉进度消息，只看关键事件
+    if (msgType != "progress") {
+        qDebug() << "👉 消息类型:" << msgType;
+    }
+
+    if (msgType == "executed") {
+        QString nodeId = data["node"].toString();
+        QString promptId = data["prompt_id"].toString();
+
+        // 【调试 2】打印每次执行完的节点ID
+        qDebug() << "✅ 节点执行完成 -> ID:" << nodeId
+                 << " 当前任务ID:" << promptId
+                 << " 预期任务ID:" << m_currentPromptId;
+
+        // 核心判断逻辑
+        if (promptId == m_currentPromptId && nodeId == "20") {
+            qDebug() << "🎯 捕捉到目标 SaveImage 节点！准备下载...";
+
+            QJsonObject output = data["output"].toObject();
+            QJsonArray images = output["images"].toArray();
+
+            if (!images.isEmpty()) {
+                QJsonObject imgInfo = images[0].toObject();
+                QString filename = imgInfo["filename"].toString();
+                QString subfolder = imgInfo["subfolder"].toString();
+                QString type = imgInfo["type"].toString();
+
+                // 发起 HTTP 请求下载图片
+                getImage(filename, subfolder, type);
+            }
+        }
+    }
+}
+
+
+void ComfyApiService::getImage(const QString& filename, const QString& subfolder, const QString& type)
+{
+    // 构造 URL: http://127.0.0.1:8188/view?filename=xxx&subfolder=xxx&type=xxx
+    QUrl url(m_serverAddress + "/view");
+    QUrlQuery query;
+    query.addQueryItem("filename", filename);
+    query.addQueryItem("subfolder", subfolder);
+    query.addQueryItem("type", type);
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    QNetworkReply* reply = m_networkManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onImageDownloadFinished);
+}
+
+void ComfyApiService::onImageDownloadFinished()
+{
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray data = reply->readAll();
+        QPixmap pixmap;
+        if (pixmap.loadFromData(data)) {
+            qDebug() << "🖼️ 图片下载并加载成功!";
+            emit imageReceived(pixmap);
+        } else {
+            qDebug() << "❌ 图片数据损坏";
+        }
+    } else {
+        qDebug() << "❌ 图片下载失败:" << reply->errorString();
+    }
+    reply->deleteLater();
+}
+
+
+--- 文件结束: src\Network\ComfyApiService.cpp ---
+
+--- 文件开始: src\Network\ComfyApiService.h ---
+
+/**
+ * @file ComfyApiService.h
+ * @brief ComfyUI API服务类头文件
+ * 
+ * 该文件定义了ComfyApiService类，用于与ComfyUI服务器进行通信。
+ * 包含HTTP请求和WebSocket连接功能，支持图片生成进度监控和结果接收。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+
+#include <QObject>
+#include <QPixmap>
+#include <QJsonObject>
+#include <QNetworkReply>
+#include <QUuid>
+
+// 前向声明
+class QNetworkAccessManager;
+class QWebSocket;
+
+/**
+ * @brief ComfyUI API服务类
+ * 
+ * 负责与ComfyUI服务器进行HTTP和WebSocket通信，
+ * 处理图片生成请求、进度监控和结果接收。
+ */
+class ComfyApiService : public QObject
+{
+    Q_OBJECT
+
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父对象指针
+     */
+    explicit ComfyApiService(QObject *parent = nullptr);
+
+    /**
+     * @brief 析构函数
+     */
+    ~ComfyApiService();
+
+    /**
+     * @brief 连接到ComfyUI服务器
+     * @param address 服务器地址
+     * @param port 服务器端口
+     */
+    void connectToHost(const QString& address, int port);
+
+    /**
+     * @brief 发送提示词生成任务
+     * @param workflow 工作流JSON对象
+     */
+    void queuePrompt(const QJsonObject& workflow);
+
+    // 【新增】获取图片数据的接口 (通过 HTTP GET)
+    void getImage(const QString& filename, const QString& subfolder, const QString& type);
+
+signals:
+    /**
+     * @brief 服务器连接成功信号
+     */
+    void serverConnected();
+
+    /**
+     * @brief 服务器连接断开信号
+     */
+    void serverDisconnected();
+
+    /**
+     * @brief 生成进度更新信号
+     * @param step 当前步骤
+     * @param total 总步骤数
+     */
+    void progressUpdated(int step, int total);
+
+    /**
+     * @brief 错误发生信号
+     * @param msg 错误消息
+     */
+    void errorOccurred(const QString& msg);
+
+    void promptQueued(const QString& promptId);
+
+    // 【新增】图片下载完成信号
+    void imageReceived(const QPixmap& img);
+
+private slots:
+    // 【新增】处理 HTTP 回复
+    void onPostFinished();
+
+    // 【新增】处理 WebSocket 文本消息
+    void onTextMessageReceived(const QString &message);
+
+    // 【新增】处理图片下载完成
+    void onImageDownloadFinished();
+
+private:
+    QNetworkAccessManager* m_networkManager; ///< HTTP网络管理器
+    QWebSocket* m_webSocket; ///< WebSocket连接
+    QString m_serverAddress; ///< 服务器地址
+    // 【新增】记录当前的任务ID，用于匹配
+    QString m_currentPromptId;
+    QString m_clientId;
+};
+
+
+--- 文件结束: src\Network\ComfyApiService.h ---
+
+--- 文件开始: src\Ui\MainWindow.cpp ---
+
+/**
+ * @file MainWindow.cpp
+ * @brief 主窗口实现文件
+ * 
+ * 该文件实现了MainWindow类，作为应用程序的主窗口。
+ * 包含界面布局、组件管理、信号连接和事件处理等功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#include "MainWindow.h"
+#include "Components/SessionList.h"
+#include "Components/ChatArea.h"
+#include "Components/InputPanel.h"      // 必须包含这个
+#include "Components/WorkflowSelector.h"
+#include "Components/ReferencePopup.h"  // 必须包含这个
+#include "../Network/ComfyApiService.h"  // 新增
+#include "../Core/WorkflowManager.h"
+
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QToolButton>
+#include <QPropertyAnimation>
+#include <QToolTip>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QResizeEvent>
+#include <limits>
+#include <QDebug>
+#include <QRandomGenerator> // 用于生成随机种子
+
+/**
+ * @brief 构造函数
+ * @param parent 父窗口指针
+ * 
+ * 初始化主窗口，设置窗口属性并创建UI界面。
+ */
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , m_leftStack(nullptr)
+    , m_sessionList(nullptr)
+    , m_chatArea(nullptr)
+    , m_inputPanel(nullptr)
+    , m_wfSelector(nullptr)
+    , m_refPopup(nullptr)
+    , m_leftContainerVisible(true)
+    , m_leftContainerOriginalWidth(250) // 默认宽度
+    , m_currentPageIndex(0) // 默认显示会话列表
+    , m_historyWindow(nullptr)
+    , m_historyBtn(nullptr)
+    , m_leftContainerAnimation(nullptr)
+    , m_mainLayout(nullptr)
+    , m_apiService(nullptr) // 新增
+{
+    setupUi();
+}
+
+/**
+ * @brief 析构函数
+ * 
+ * Qt会自动清理子控件，无需手动删除。
+ */
+MainWindow::~MainWindow()
+{
+}
+
+/**
+ * @brief 初始化UI界面
+ * 
+ * 创建主窗口的所有UI组件，包括：
+ * - 中心部件和主布局
+ * - 左侧会话列表
+ * - 右侧聊天区域和输入面板
+ * - 浮动窗口（工作流选择器和参考图弹窗）
+ * - 信号连接和初始状态设置
+ */
+void MainWindow::setupUi()
+{
+    this->resize(1280, 800);
+    this->setWindowTitle("CloudArt");
+    // 1. 创建中心部件
+
+    QWidget* central = new QWidget(this);
+    this->setCentralWidget(central);
+
+    // 2. 顶级水平布局 (左侧列表 | 右侧工作区)
+    m_mainLayout = new QHBoxLayout(central);
+    m_mainLayout->setContentsMargins(0, 0, 0, 0);
+    m_mainLayout->setSpacing(0);
+
+    // --- 左侧容器堆栈 ---
+    m_leftStack = new QStackedWidget(central);
+    
+    // 添加会话列表页面
+    m_sessionList = new SessionList(m_leftStack);
+    m_leftStack->addWidget(m_sessionList);
+    
+    // 添加历史记录页面
+    m_historyWindow = new QWidget(m_leftStack);
+    m_historyWindow->setStyleSheet(
+        "QWidget { "
+        "  background-color: #2A2B32; "
+        "  border-right: 1px solid #40414F; "
+        "}"
+    );
+    m_leftStack->addWidget(m_historyWindow);
+    
+    // 设置默认显示会话列表
+    m_leftStack->setCurrentIndex(0);
+    
+    // 保存左侧容器的初始宽度，最大不超过250
+    m_leftContainerOriginalWidth = 250;
+    m_leftStack->setMaximumWidth(250);
+    
+    m_mainLayout->insertWidget(0, m_leftStack);
+
+    // --- 右侧容器 ---
+    QWidget* rightWidget = new QWidget(central);
+    QVBoxLayout* rightLayout = new QVBoxLayout(rightWidget);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setSpacing(0);
+
+    // A. 右上：聊天区域 (ChatArea) - 占据主要空间 (Stretch = 1)
+    m_chatArea = new ChatArea(rightWidget);
+    rightLayout->addWidget(m_chatArea, 1);
+
+    // B. 右下：输入控制板 (InputPanel) - 【这里就是创建它的地方！】
+    m_inputPanel = new InputPanel(rightWidget);
+    rightLayout->addWidget(m_inputPanel);
+
+    // 将右侧整体加入主布局
+    m_mainLayout->addWidget(rightWidget);
+
+    // ---------------------------------------------------------
+    // 下面是浮动窗口的初始化 (不加入 Layout，独立存在的)
+    // ---------------------------------------------------------
+
+    // 初始化业务管理器
+    m_wfManager = new WorkflowManager(this);
+
+    // 1. 初始化工作流选择器
+    m_wfSelector = new WorkflowSelector(this);
+
+
+    // 2. 初始化参考图弹窗
+    m_refPopup = new ReferencePopup(this);
+
+    // ---------------------------------------------------------
+    // 切换按钮和动画初始化
+    // ---------------------------------------------------------
+    
+    // 创建切换按钮
+    m_toggleSessionListBtn = new QToolButton(this);
+    m_toggleSessionListBtn->setIcon(QIcon(":/images/HideConversation.png"));
+    m_toggleSessionListBtn->setIconSize(QSize(24, 24));
+    m_toggleSessionListBtn->setFixedSize(32, 32);
+    m_toggleSessionListBtn->setCursor(Qt::PointingHandCursor);
+    m_toggleSessionListBtn->setStyleSheet(
+        "QToolButton { "
+        "  background-color: #40414F; "
+        "  border: none; "
+        "  border-radius: 4px; "
+        "}"
+        "QToolButton:hover { "
+        "  background-color: #50515F; "
+        "}"
+    );
+    
+    // 设置工具提示
+    m_toggleSessionListBtn->setToolTip("对话记录");
+    
+    // 创建动画效果 - 使用minimumWidth和maximumWidth控制收缩
+    m_leftContainerAnimation = new QPropertyAnimation(m_leftStack, "minimumWidth", this);
+    m_leftContainerAnimation->setDuration(300); // 300毫秒动画
+    m_leftContainerAnimation->setEasingCurve(QEasingCurve::InOutQuad);
+    
+    // 连接按钮点击信号
+    connect(m_toggleSessionListBtn, &QToolButton::clicked,
+            this, &MainWindow::switchToSessionList);
+
+    // ---------------------------------------------------------
+    // 历史记录按钮初始化
+    // ---------------------------------------------------------
+    
+    // 创建历史记录按钮
+    m_historyBtn = new QToolButton(this);
+    m_historyBtn->setIcon(QIcon(":/images/historypic.png"));
+    m_historyBtn->setIconSize(QSize(24, 24));
+    m_historyBtn->setFixedSize(32, 32);
+    m_historyBtn->setCursor(Qt::PointingHandCursor);
+    m_historyBtn->setStyleSheet(
+        "QToolButton { "
+        "  background-color: #40414F; "
+        "  border: none; "
+        "  border-radius: 4px; "
+        "}"
+        "QToolButton:hover { "
+        "  background-color: #50515F; "
+        "}"
+    );
+    m_historyBtn->setToolTip("生成记录");
+    
+    // 连接历史记录按钮点击信号
+    connect(m_historyBtn, &QToolButton::clicked,
+            this, &MainWindow::switchToHistoryWindow);
+
+    // ---------------------------------------------------------
+    // 信号连接
+    // ---------------------------------------------------------
+
+    // 1. 点击"选择工作流"按钮 -> 呼出工作流面板
+    connect(m_inputPanel->getWorkflowBtn(), &QPushButton::clicked,
+            this, &MainWindow::onWorkflowBtnClicked);
+
+    // 2. 点击"参考图(回形针)"按钮 -> 呼出参考图面板
+    connect(m_inputPanel->getRefBtn(), &QToolButton::clicked,
+            this, &MainWindow::onRefBtnClicked);
+            
+    // 3. 点击"生成"按钮 -> 处理生成请求
+    connect(m_inputPanel, &InputPanel::generateClicked,
+            this, &MainWindow::onGenerateClicked);
+            
+    // 4. 工作流选择器选中工作流 -> 更新界面状态
+    connect(m_wfSelector, &WorkflowSelector::workflowSelected,
+            this, &MainWindow::onWorkflowSelected);
+
+
+
+    // ---------------------------------------------------------
+    // 初始状态设置
+    // ---------------------------------------------------------
+
+    // 默认我们假设当前是“文生图”模式，所以禁用参考图按钮
+
+    // 默认我们假设当前是“文生图”模式
+    m_inputPanel->updateState(WorkflowType::TextToImage);
+
+    // =========================================================
+    // 【修复代码】初始化悬浮按钮的位置
+    // =========================================================
+
+    // 1. 强制设置初始位置。
+    // 注意：此时 m_leftStack->width() 可能还没计算好，所以我们直接使用
+    // 已知的 m_leftContainerOriginalWidth (250) 来计算，确保软件一启动按钮就在正确位置。
+    if (m_leftContainerVisible) {
+        int initialBtnX = m_leftContainerOriginalWidth + 10;
+        m_toggleSessionListBtn->move(initialBtnX, 10);
+
+        // 历史按钮在切换按钮下方
+        int historyBtnY = 10 + m_toggleSessionListBtn->height() + 10;
+        m_historyBtn->move(initialBtnX, historyBtnY);
+    } else {
+        m_toggleSessionListBtn->move(10, 10);
+        int historyBtnY = 10 + m_toggleSessionListBtn->height() + 10;
+        m_historyBtn->move(10, historyBtnY);
+    }
+
+    // 2. 确保按钮在所有控件的最上层（防止被 Sidebar 遮挡）
+    m_toggleSessionListBtn->raise();
+    m_historyBtn->raise();
+
+    // 3. 使用 0ms 定时器进行二次校准
+    // 这是一个 Qt 常用技巧：0ms 定时器会在当前事件循环结束后（即界面显示、布局计算完成后）立刻执行。
+    // 这样能确保 updateToggleButtonPosition 获取到的是 Layout 计算后的真实坐标。
+    QTimer::singleShot(0, this, [this](){
+        updateToggleButtonPosition();
+        updateHistoryButtonPosition();
+    });
+
+    // ---------------------------------------------------------
+    // API服务初始化
+    // ---------------------------------------------------------
+
+    // 初始化服务
+    m_apiService = new ComfyApiService(this);
+
+    // 监听连接状态 (为了测试)
+    connect(m_apiService, &ComfyApiService::serverConnected, this, [](){
+        qDebug() << "主窗口收到消息：ComfyUI 连接成功！✅";
+    });
+
+    // 尝试连接本地 ComfyUI (默认端口 8000)
+    // 确保你的 ComfyUI 已经启动了！
+    m_apiService->connectToHost("127.0.0.1", 8000);
+
+    // 在 setupUi 或 构造函数 中
+    connect(m_apiService, &ComfyApiService::imageReceived, this, [this](const QPixmap& img){
+        if (m_chatArea) {
+            m_chatArea->addAiImage(img); // 把下载到的图贴到聊天窗口
+        }
+    });
+
+}
+
+/**
+ * @brief 工作流按钮点击事件处理
+ * 
+ * 当用户点击工作流选择按钮时，弹出工作流选择器窗口。
+ * 窗口位置自动计算在按钮上方居中显示。
+ */
+void MainWindow::onWorkflowBtnClicked() {
+    // 获取按钮位置，让面板出现在按钮上方
+    QPushButton* btn = m_inputPanel->getWorkflowBtn();
+    if (btn) {
+        QPoint btnPos = btn->mapToGlobal(QPoint(btn->width() / 2, 0));
+        m_wfSelector->popup(btnPos);
+    }
+}
+
+/**
+ * @brief 参考图按钮点击事件处理
+ * 
+ * 当用户点击参考图按钮时，切换参考图选择窗口的显示和隐藏状态。
+ * 如果窗口已显示，则隐藏；如果窗口已隐藏，则显示。
+ */
+void MainWindow::onRefBtnClicked() {
+    // 如果窗口已显示，则隐藏；否则显示
+    if (m_refPopup->isVisible()) {
+        m_refPopup->hide();
+    } else {
+        // 获取按钮位置，让面板出现在按钮上方
+        QToolButton* btn = m_inputPanel->getRefBtn();
+        if (btn) {
+            QPoint btnPos = btn->mapToGlobal(QPoint(btn->width() / 2, 0));
+            m_refPopup->popup(btnPos);
+        }
+    }
+}
+
+/**
+ * @brief 工作流选择事件处理
+ * @param info 选中的工作流信息
+ * 
+ * 当用户从工作流选择器中选择工作流时，更新输入面板状态。
+ * 根据工作流类型启用或禁用相关功能按钮。
+ */
+void MainWindow::onWorkflowSelected(const WorkflowInfo& info)
+{
+    // 根据工作流类型更新输入面板状态
+    m_inputPanel->updateState(info.type);
+
+    // 【新增】记录当前类型，供生成时使用
+    m_currentWorkflowType = info.type;
+    
+    qDebug() << "切换到工作流:" << info.name << " (ID:" << info.id << ")";
+}
+
+/**
+ * @brief 生成按钮点击事件处理
+ * @param prompt 用户输入的提示词
+ * 
+ * 当用户点击生成按钮时，处理生成请求。
+ * 只有在输入框有内容时才会触发此信号。
+ * 首先在聊天区域添加用户对话，然后处理生成逻辑。
+ */
+void MainWindow::onGenerateClicked(const QString& prompt)
+{
+    qDebug() << "生成请求 - 提示词:" << prompt;
+
+    // 1. 界面显示用户气泡
+    if (m_chatArea) {
+        m_chatArea->addUserMessage(prompt);
+    }
+
+    // 2. 准备参数包 (Map)
+    QMap<QString, QVariant> params;
+
+    // 参数 A: 提示词
+    params["prompt"] = prompt;
+
+    // 参数 B: 随机种子 (ComfyUI 需要一个大整数)
+    qint64 seed = QRandomGenerator::global()->generate();
+    if (seed < 0) seed = -seed; // 转正数
+    params["seed"] = seed;
+
+    qDebug() << "正在构建工作流, 类型:" << (int)m_currentWorkflowType << " 种子:" << seed;
+
+    // 3. 调用管理器构建 JSON
+    QJsonObject workflow = m_wfManager->buildWorkflow(m_currentWorkflowType, params);
+
+    // 4. 检查并发送
+    if (workflow.isEmpty()) {
+        qDebug() << "❌ 工作流构建失败，可能是模板文件没找到或类型未适配";
+        // 这里以后可以弹个 QMessageBox 提示用户
+        return;
+    }
+
+    if (m_apiService) {
+        m_apiService->queuePrompt(workflow);
+    } else {
+        qDebug() << "❌ ApiService 未初始化";
+    }
+}
+
+/**
+ * @brief 切换左侧容器显示状态
+ * 
+ * 当左侧容器不在场时，呼出容器；
+ * 当左侧容器在场时，收起容器。
+ */
+void MainWindow::onToggleLeftContainer()
+{
+    if (m_leftContainerVisible) {
+        // 收起左侧容器 - 向左动画收缩到0宽度
+        m_leftContainerAnimation->setStartValue(m_leftStack->width());
+        m_leftContainerAnimation->setEndValue(0);
+        m_leftContainerAnimation->start();
+        
+        // 设置maximumWidth为0，确保完全隐藏
+        m_leftStack->setMaximumWidth(0);
+        
+        m_leftContainerVisible = false;
+        // 工具提示保持固定文本"对话记录"和"生成记录"
+        
+        // 更新按钮位置
+        QTimer::singleShot(300, this, [this]() {
+            updateToggleButtonPosition();
+            updateHistoryButtonPosition();
+        });
+    } else {
+        // 呼出左侧容器 - 向右动画恢复到原始宽度
+        // 设置最大宽度限制为250
+        m_leftStack->setMaximumWidth(250);
+        
+        // 使用保存的初始宽度
+        m_leftContainerAnimation->setStartValue(0);
+        m_leftContainerAnimation->setEndValue(m_leftContainerOriginalWidth);
+        m_leftContainerAnimation->start();
+        
+        m_leftContainerVisible = true;
+        // 工具提示保持固定文本"对话记录"和"生成记录"
+        
+        // 更新按钮位置
+        QTimer::singleShot(300, this, [this]() {
+            updateToggleButtonPosition();
+            updateHistoryButtonPosition();
+        });
+    }
+}
+
+/**
+ * @brief 更新切换按钮位置
+ * 
+ * 根据左侧容器的显示状态，调整切换按钮的位置。
+ * 左侧容器显示时按钮在容器右侧上方，左侧容器隐藏时按钮在窗口左上角。
+ */
+void MainWindow::updateToggleButtonPosition()
+{
+    if (m_leftContainerVisible) {
+        // 左侧容器显示时，按钮在容器右侧上方
+        // 使用容器的实际宽度来计算位置
+        int containerWidth = m_leftStack->width();
+        if (containerWidth <= 0) {
+            containerWidth = 250; // 默认宽度
+        }
+        // 按钮放在容器右侧，距离容器右边框10像素
+        QPoint pos = m_leftStack->mapToParent(QPoint(containerWidth + 10, 10));
+        m_toggleSessionListBtn->move(pos);
+    } else {
+        // 左侧容器隐藏时，按钮在窗口左上角
+        m_toggleSessionListBtn->move(10, 10);
+    }
+    
+    m_toggleSessionListBtn->raise(); // 确保按钮在最上层
+}
+
+/**
+ * @brief 窗口大小改变事件处理
+ * @param event 窗口大小改变事件
+ * 
+ * 当窗口大小改变时，更新切换按钮的位置。
+ */
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    updateToggleButtonPosition();
+    updateHistoryButtonPosition();
+}
+
+/**
+ * @brief 切换到会话列表页面
+ * 
+ * 当左侧容器不在场时，呼出容器并显示会话列表；
+ * 当左侧容器在场时，切换到会话列表页面。
+ */
+void MainWindow::switchToSessionList()
+{
+    if (!m_leftContainerVisible) {
+        // 左侧容器不在场，先呼出容器
+        onToggleLeftContainer();
+        // 设置当前页面为会话列表
+        m_leftStack->setCurrentIndex(0);
+        m_currentPageIndex = 0;
+    } else if (m_currentPageIndex != 0) {
+        // 左侧容器在场但当前不是会话列表，切换到会话列表
+        m_leftStack->setCurrentIndex(0);
+        m_currentPageIndex = 0;
+        // 工具提示保持固定文本"对话记录"和"生成记录"
+    } else {
+        // 左侧容器在场且当前是会话列表，收起容器
+        onToggleLeftContainer();
+    }
+}
+
+/**
+ * @brief 切换到历史记录页面
+ * 
+ * 当左侧容器不在场时，呼出容器并显示历史记录；
+ * 当左侧容器在场时，切换到历史记录页面。
+ */
+void MainWindow::switchToHistoryWindow()
+{
+    if (!m_leftContainerVisible) {
+        // 左侧容器不在场，先呼出容器
+        onToggleLeftContainer();
+        // 设置当前页面为历史记录
+        m_leftStack->setCurrentIndex(1);
+        m_currentPageIndex = 1;
+    } else if (m_currentPageIndex != 1) {
+        // 左侧容器在场但当前不是历史记录，切换到历史记录
+        m_leftStack->setCurrentIndex(1);
+        m_currentPageIndex = 1;
+        // 工具提示保持固定文本"对话记录"和"生成记录"
+    } else {
+        // 左侧容器在场且当前是历史记录，收起容器
+        onToggleLeftContainer();
+    }
+}
+
+/**
+ * @brief 更新历史按钮位置
+ * 
+ * 历史按钮始终位于切换按钮的下方，保持与切换按钮相同的水平位置。
+ */
+void MainWindow::updateHistoryButtonPosition()
+{
+    // 历史按钮位于切换按钮的下方
+    QPoint togglePos = m_toggleSessionListBtn->pos();
+    int buttonHeight = m_toggleSessionListBtn->height();
+    
+    // 历史按钮放在切换按钮下方，保持相同的水平位置
+    QPoint pos = QPoint(togglePos.x(), togglePos.y() + buttonHeight + 10);
+    m_historyBtn->move(pos);
+    
+    m_historyBtn->raise(); // 确保按钮在最上层
+}
+
+
+--- 文件结束: src\Ui\MainWindow.cpp ---
+
+--- 文件开始: src\Ui\MainWindow.h ---
+
+/**
+ * @file MainWindow.h
+ * @brief 主窗口头文件
+ * 
+ * 该文件定义了MainWindow类，作为应用程序的主窗口。
+ * 包含界面组件管理、信号槽声明和成员变量定义。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+
+#include <QMainWindow>
+#include <QPropertyAnimation>
+#include <QHBoxLayout>
+#include <QStackedWidget>
+#include "../Model/WorkflowTypes.h"
+#include "../Network/ComfyApiService.h"
+
+
+// --- 前向声明 (Forward Declarations) ---
+// 这样做的好处是不用在这里 #include 所有头文件，编译更快，也不容易报错
+class InputPanel;
+class WorkflowSelector;
+class ReferencePopup;
+class SessionList;
+class ChatArea;
+class QToolButton;
+class ComfyApiService;
+class WorkflowManager;
+
+/**
+ * @brief 主窗口类
+ * 
+ * 继承自QMainWindow，作为应用程序的主窗口容器。
+ * 管理左侧会话列表、右侧聊天区域和输入面板，以及浮动窗口组件。
+ */
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit MainWindow(QWidget *parent = nullptr);
+    
+    /**
+     * @brief 析构函数
+     */
+    ~MainWindow();
+
+private slots:
+    /**
+     * @brief 工作流按钮点击槽函数
+     */
+    void onWorkflowBtnClicked();
+    
+    /**
+     * @brief 参考图按钮点击槽函数
+     */
+    void onRefBtnClicked();
+    
+    /**
+     * @brief 工作流选择槽函数
+     * @param info 选中的工作流信息
+     */
+    void onWorkflowSelected(const WorkflowInfo& info);
+    
+    /**
+     * @brief 生成按钮点击槽函数
+     * @param prompt 用户输入的提示词
+     */
+    void onGenerateClicked(const QString& prompt);
+    
+    /**
+     * @brief 切换左侧容器显示状态
+     */
+    void onToggleLeftContainer();
+    
+    /**
+     * @brief 切换到会话列表页面
+     */
+    void switchToSessionList();
+    
+    /**
+     * @brief 切换到历史记录页面
+     */
+    void switchToHistoryWindow();
+
+protected:
+    /**
+     * @brief 窗口大小改变事件处理函数
+     * @param event 大小改变事件
+     */
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    /**
+     * @brief 初始化UI布局
+     */
+    void setupUi();
+
+    /**
+     * @brief 更新切换按钮位置
+     */
+    void updateToggleButtonPosition();
+    
+    /**
+     * @brief 更新历史记录按钮位置
+     */
+    void updateHistoryButtonPosition();
+
+    // --- 成员变量 (持有各个组件的指针) ---
+    // 左侧
+    QStackedWidget* m_leftStack; ///< 左侧容器堆栈
+    SessionList* m_sessionList; ///< 会话列表组件
+
+    // 右侧
+    ChatArea* m_chatArea; ///< 聊天区域组件
+    InputPanel* m_inputPanel; ///< 底部控制面板组件
+
+    // 浮动窗口 (Popups)
+    WorkflowSelector* m_wfSelector; ///< 工作流选择面板组件
+    ReferencePopup* m_refPopup; ///< 参考图上传面板组件
+
+    // 切换按钮和动画
+    QToolButton* m_toggleSessionListBtn; ///< 切换对话栏显示状态的按钮
+    QPropertyAnimation* m_leftContainerAnimation; ///< 左侧容器动画效果
+    bool m_leftContainerVisible; ///< 左侧容器是否可见
+    int m_leftContainerOriginalWidth; ///< 左侧容器的初始宽度
+    int m_currentPageIndex; ///< 当前显示的页面索引
+    
+    /** 历史记录窗口 */
+    QWidget* m_historyWindow;
+    
+    /** 历史记录按钮 */
+    QToolButton* m_historyBtn;
+    
+    /** 主布局 */
+    QHBoxLayout* m_mainLayout;
+    
+    /** API服务 */
+    ComfyApiService* m_apiService;
+
+    // 【新增】业务逻辑管理器
+    WorkflowManager* m_wfManager;
+
+    // 【新增】记录当前选中的工作流类型 (默认为文生图)
+    WorkflowType m_currentWorkflowType = WorkflowType::TextToImage;
+};
+
+
+--- 文件结束: src\Ui\MainWindow.h ---
+
+--- 文件开始: src\Ui\Components\ChatArea.cpp ---
+
+#include "ChatArea.h"
+#include "ChatBubble.h"
+#include <QScrollBar>
+#include <QTimer>
+
+ChatArea::ChatArea(QWidget *parent) : QWidget(parent)
+{
+    setupUi();
+
+    // 测试数据：你可以解开注释看看效果
+    addUserMessage("帮我生成一张丰川祥子的图片。");
+    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png")); // 记得换成存在的图片路径测试
+    addUserMessage("帮我生成一张丰川祥子的图片的撒范德萨发大水发射点范德萨范德萨发生爱上发大水范德萨发大水。");
+    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png"));
+    addUserMessage("帮我生成一张丰川祥子的图片。");
+    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png"));
+    addUserMessage("帮我生成一张美丽女孩的横板图片。");
+    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/模特/ComfyUI_temp_yqjmp_00006_.png"));
+}
+
+void ChatArea::setupUi()
+{
+    // 1. 主布局
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+
+    // 2. 滚动区域
+    m_scrollArea = new QScrollArea(this);
+    m_scrollArea->setWidgetResizable(true); // 关键！否则内部无法撑开
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 只需垂直滚动
+    m_scrollArea->setFrameShape(QFrame::NoFrame); // 无边框
+
+    // 美化滚动条 (和 SessionList 一致)
+    m_scrollArea->setStyleSheet(
+        "QScrollArea { background: #343541; border: none; }"
+        "QScrollBar:vertical { border: none; background: #343541; width: 10px; margin: 0px; }"
+        "QScrollBar::handle:vertical { background: #565869; min-height: 20px; border-radius: 5px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+        );
+
+    // 3. 滚动内容容器
+    m_scrollContent = new QWidget();
+    m_scrollContent->setStyleSheet("background-color: transparent;"); // 透明，透出 ScrollArea 背景
+
+    m_contentLayout = new QVBoxLayout(m_scrollContent);
+    m_contentLayout->setContentsMargins(20, 20, 20, 20); // 给气泡留出四周空隙
+    m_contentLayout->setSpacing(20); // 气泡之间的间距
+    m_contentLayout->addStretch();   // 初始弹簧，把第一条消息顶在最上面
+
+    m_scrollArea->setWidget(m_scrollContent);
+    mainLayout->addWidget(m_scrollArea);
+}
+
+void ChatArea::addUserMessage(const QString& text)
+{
+    ChatBubble* bubble = new ChatBubble(ChatRole::User, text, m_scrollContent);
+
+    // 插入到弹簧之前 (count()-1)
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
+
+    scrollToBottom();
+}
+
+void ChatArea::addAiImage(const QPixmap& img)
+{
+    ChatBubble* bubble = new ChatBubble(ChatRole::AI, img, m_scrollContent);
+
+    // 插入到弹簧之前
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
+
+    scrollToBottom();
+}
+
+void ChatArea::scrollToBottom()
+{
+    // 使用 QTimer::singleShot 0ms 延时
+    // 原因是：界面布局刷新需要时间，直接 setValue 可能滚动不到最底部
+    QTimer::singleShot(10, this, [=](){
+        QScrollBar* bar = m_scrollArea->verticalScrollBar();
+        bar->setValue(bar->maximum());
+    });
+}
+
+void ChatArea::clear()
+{
+    // 遍历布局中的所有项目
+    QLayoutItem *item;
+    // 我们要保留第一个 item (那是 addStretch 加的弹簧)
+    // 如果你的弹簧是最后加的，逻辑就不一样。
+    // 在之前的代码中，我在构造函数里加了 m_contentLayout->addStretch();
+    // 它是布局里的第 0 个元素。
+
+    // 从最后往前删，直到只剩 1 个（即弹簧）
+    while (m_contentLayout->count() > 1) {
+        item = m_contentLayout->takeAt(m_contentLayout->count() - 1); // 取出最后一个
+        if (item->widget()) {
+            delete item->widget(); // 删除气泡控件
+        }
+        delete item; // 删除布局项本身
+    }
+
+    // 重置状态
+    m_currentSessionId = -1;
+
+    // 强制刷新一下 UI
+    this->update();
+}
+
+
+--- 文件结束: src\Ui\Components\ChatArea.cpp ---
+
+--- 文件开始: src\Ui\Components\ChatArea.h ---
+
+/**
+ * @file ChatArea.h
+ * @brief 聊天区域组件头文件
+ * 
+ * 该文件定义了ChatArea类，作为应用程序右侧的聊天显示区域。
+ * 包含用户消息和AI图片的显示、会话切换和清空功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QScrollArea>
+#include <QVBoxLayout>
+
+/**
+ * @brief 聊天区域类
+ * 
+ * 继承自QWidget，管理聊天消息的显示和会话切换。
+ * 支持用户文字消息和AI图片消息的添加和显示。
+ */
+class ChatArea : public QWidget
+{
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit ChatArea(QWidget *parent = nullptr);
+
+    /**
+     * @brief 清空当前聊天界面
+     */
+    void clear();
+
+    /**
+     * @brief 设置当前会话ID
+     * @param id 会话ID
+     */
+    void setCurrentSessionId(int id) { m_currentSessionId = id; }
+    
+    /**
+     * @brief 获取当前会话ID
+     * @return int 当前会话ID，-1表示无选中会话
+     */
+    int currentSessionId() const { return m_currentSessionId; }
+
+    /**
+     * @brief 添加用户文字消息
+     * @param text 用户消息文本
+     */
+    void addUserMessage(const QString& text);
+
+    /**
+     * @brief 添加AI图片消息
+     * @param img AI生成的图片
+     */
+    void addAiImage(const QPixmap& img);
+
+private:
+    /**
+     * @brief 初始化UI布局
+     */
+    void setupUi();
+    
+    /**
+     * @brief 自动滚动到底部
+     */
+    void scrollToBottom();
+
+private:
+    QScrollArea* m_scrollArea; ///< 滚动区域组件
+    QWidget* m_scrollContent; ///< 滚动内容组件
+    QVBoxLayout* m_contentLayout; ///< 内容布局
+    int m_currentSessionId = -1; ///< 当前会话ID，-1表示无选中会话
+};
+
+
+--- 文件结束: src\Ui\Components\ChatArea.h ---
+
+--- 文件开始: src\Ui\Components\ChatBubble.cpp ---
+
+#include "ChatBubble.h"
+#include "ImageViewer.h"
+#include <QFrame>
+#include <QDebug>
+#include <QGraphicsDropShadowEffect>
+#include <QMouseEvent>
+#include <QStandardPaths>
+#include <QFileDialog>
+#include <QClipboard>
+#include <QApplication>
+
+ChatBubble::ChatBubble(ChatRole role, const QVariant& data, QWidget *parent)
+    : QWidget(parent)
+    , m_role(role)
+{
+    // 允许自定义背景（虽然 Bubble 本身通常透明）
+    this->setAttribute(Qt::WA_StyledBackground, true);
+
+    m_layout = new QHBoxLayout(this);
+    m_layout->setContentsMargins(10, 10, 10, 10);
+    m_layout->setSpacing(0); // 紧凑布局
+
+    setupUi(data);
+}
+
+void ChatBubble::setupUi(const QVariant& data)
+{
+    // ---------------------------------------------------
+    // 布局逻辑：
+    // User: [弹簧] [内容]
+    // AI:   [内容] [弹簧]
+    // ---------------------------------------------------
+
+    if (m_role == ChatRole::User) {
+        m_layout->addStretch(); // 左边加弹簧，把内容顶到右边
+        initTextBubble(data.toString());
+    } else {
+        // 判断传入的是图片对象还是路径，这里假设先传入 QPixmap
+        if (data.canConvert<QPixmap>()) {
+            initImageBubble(data.value<QPixmap>());
+        } else {
+            // 容错：如果是文本（比如报错信息）
+            initTextBubble(data.toString());
+        }
+        m_layout->addStretch(); // 右边加弹簧，把内容顶到左边
+    }
+}
+
+void ChatBubble::initTextBubble(const QString& text)
+{
+    // 创建一个容器 Frame 用来画背景和圆角
+    QFrame* frame = new QFrame(this);
+
+    // 只有用户的气泡有背景色
+    QString style = (m_role == ChatRole::User)
+                        ? "background-color: #444654; border-radius: 8px; color: #ECECF1; padding: 10px;"
+                        : "background-color: transparent; color: #ECECF1; padding: 10px;";
+
+    frame->setStyleSheet(style);
+
+    // 内部放 Label 显示文字
+    QHBoxLayout* frameLayout = new QHBoxLayout(frame);
+    frameLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel* lblText = new QLabel(text, frame);
+    lblText->setWordWrap(true); // 关键：自动换行
+    lblText->setStyleSheet("border: none; background: transparent;");
+    lblText->setTextInteractionFlags(Qt::TextSelectableByMouse); // 允许复制文字
+
+    // 限制最大宽度，防止气泡太宽读起来累
+    lblText->setMaximumWidth(600);
+
+    // 如果不设置这个，右键 Label 只会弹出系统默认的菜单（或者没反应）
+    lblText->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // 4. 连接信号
+    // 当用户在 Label 上右键时，会触发 customContextMenuRequested 信号
+    connect(lblText, &QLabel::customContextMenuRequested, this, [=](const QPoint& pos){
+        QMenu menu;
+        menu.setStyleSheet(
+            "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
+            "QMenu::item { padding: 5px 20px; }"
+            "QMenu::item:selected { background-color: #40414F; }"
+            );
+
+        // 添加“复制全文”动作
+        QAction* actCopyAll = menu.addAction("📋 复制全部内容");
+        connect(actCopyAll, &QAction::triggered, [=](){
+            QClipboard *clipboard = QApplication::clipboard();
+            clipboard->setText(text); // 复制完整的原始文本
+        });
+
+        // 如果用户选中了部分文本，也可以添加“复制选中” (可选)
+        if (lblText->hasSelectedText()) {
+            QAction* actCopySelected = menu.addAction("✂️ 复制选中内容");
+            connect(actCopySelected, &QAction::triggered, [=](){
+                QClipboard *clipboard = QApplication::clipboard();
+                clipboard->setText(lblText->selectedText());
+            });
+        }
+
+        // 在鼠标位置弹出菜单
+        // mapToGlobal(pos) 把 Label 内部坐标转为屏幕坐标
+        menu.exec(lblText->mapToGlobal(pos));
+    });
+
+    frameLayout->addWidget(lblText);
+    m_layout->addWidget(frame);
+}
+
+void ChatBubble::initImageBubble(const QPixmap& originalImg)
+{
+    m_currentImage = originalImg;
+    // 图片气泡容器
+    QLabel* imgLabel = new QLabel(this);
+    imgLabel->setStyleSheet("border-radius: 8px; border: 2px solid #444;"); // 给图片加个边框更好看
+
+    // 【关键】开启鼠标追踪并安装过滤器
+    imgLabel->setCursor(Qt::PointingHandCursor); // 鼠标变手型
+    imgLabel->installEventFilter(this);          // 让 ChatBubble 处理 Label 的事件
+
+    // ---------------------------------------------------
+    // 关键：智能缩放逻辑 (Bounding Box)
+    // ---------------------------------------------------
+    // 设定最大显示区域：宽 512，高 512 (你可以根据需要改大，比如 600x800)
+    QSize maxDisplaySize(512, 512);
+
+    // 使用 KeepAspectRatio 保持比例
+    // 使用 SmoothTransformation 抗锯齿，否则缩放后图片会有锯齿
+    QPixmap scaledImg = originalImg.scaled(maxDisplaySize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    imgLabel->setPixmap(scaledImg);
+    imgLabel->setFixedSize(scaledImg.size()); // Label 大小紧贴图片
+
+    // 增加阴影效果，让图片更有立体感
+    QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(15);
+    shadow->setOffset(0, 4);
+    shadow->setColor(QColor(0, 0, 0, 100)); // 半透明黑
+    imgLabel->setGraphicsEffect(shadow);
+
+    m_layout->addWidget(imgLabel);
+}
+
+bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
+{
+    // 如果事件源是QLabel 且 是鼠标点击
+    if (qobject_cast<QLabel*>(watched) && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+
+        if (mouseEvent->button() == Qt::LeftButton) {
+            // 左键点击 -> 查看大图
+            showViewer();
+            return true;
+        }
+        else if (mouseEvent->button() == Qt::RightButton) {
+            // 右键点击 -> 弹出菜单
+            QMenu menu;
+            // 简单的暗色系菜单样式
+            menu.setStyleSheet(
+                "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
+                "QMenu::item { padding: 5px 20px; }"
+                "QMenu::item:selected { background-color: #40414F; }"
+                );
+
+            // 1. 复制功能
+            QAction* actCopy = menu.addAction("❐ 复制图片");
+            connect(actCopy, &QAction::triggered, this, [=](){
+                // 获取系统剪贴板并设置图片
+                QClipboard *clipboard = QApplication::clipboard();
+                clipboard->setPixmap(m_currentImage);
+            });
+
+            // 2. 另存为功能
+            QAction* actSave = menu.addAction("💾 另存为...");
+            connect(actSave, &QAction::triggered, this, &ChatBubble::saveImage);
+
+            menu.exec(mouseEvent->globalPosition().toPoint());
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
+void ChatBubble::showViewer() {
+    // 创建查看器并显示（非模态或模态皆可，这里用模态简单点）
+    ImageViewer* viewer = new ImageViewer(m_currentImage, this);
+    viewer->exec(); // 模态运行，关闭后自动释放
+    delete viewer;
+}
+
+void ChatBubble::saveImage() {
+    // 获取系统的图片文件夹路径
+    QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    QString fileName = QFileDialog::getSaveFileName(this, "保存图片",
+                                                    desktopPath + "/cloudart_gen.png",
+                                                    "Images (*.png *.jpg)");
+    if (!fileName.isEmpty()) {
+        m_currentImage.save(fileName);
+    }
+}
+
+
+void ChatBubble::setLoading(bool loading) {
+    if (loading) {
+        // 加载转圈 GIF
+        QMovie* movie = new QMovie(":/images/loading.gif");
+        movie->setScaledSize(QSize(50, 50)); // 小一点
+        movie->start();
+        // 假设你有一个 m_imageLabel 用于显示图片
+        m_imageLabel->setMovie(movie);
+        m_imageLabel->setFixedSize(100, 100); // 占位大小
+    }
+}
+
+void ChatBubble::updateImage(const QPixmap& img) {
+    // 停止动画，清理 movie
+    if (m_imageLabel->movie()) {
+        delete m_imageLabel->movie();
+        m_imageLabel->setMovie(nullptr);
+    }
+    // 复用之前的 initImageBubble 逻辑重新渲染
+    initImageBubble(img);
+}
+
+
+--- 文件结束: src\Ui\Components\ChatBubble.cpp ---
+
+--- 文件开始: src\Ui\Components\ChatBubble.h ---
+
+/**
+ * @file ChatBubble.h
+ * @brief 聊天气泡组件头文件
+ * 
+ * 该文件定义了ChatBubble类，作为聊天区域中的消息气泡。
+ * 支持用户文本消息和AI图片消息的显示，包含保存和查看功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QLabel>
+#include <QHBoxLayout>
+#include <QMenu>
+
+/**
+ * @brief 聊天角色枚举
+ * 
+ * 定义消息发送者的角色类型。
+ */
+enum class ChatRole {
+    User, ///< 用户角色（靠右显示，文本消息）
+    AI    ///< AI角色（靠左显示，图片消息）
+};
+
+/**
+ * @brief 聊天气泡类
+ * 
+ * 继承自QWidget，表示聊天区域中的单个消息气泡。
+ * 支持不同角色的消息显示、图片保存和查看功能。
+ */
+class ChatBubble : public QWidget
+{
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param role 消息角色
+     * @param data 消息数据（文本或图片）
+     * @param parent 父窗口指针
+     */
+    explicit ChatBubble(ChatRole role, const QVariant& data, QWidget *parent = nullptr);
+
+
+
+protected:
+    /**
+     * @brief 事件过滤器处理
+     * @param watched 被监视的对象
+     * @param event 事件
+     * @return bool 是否处理事件
+     */
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
+private:
+    /**
+     * @brief 初始化UI布局
+     * @param data 消息数据
+     */
+    void setupUi(const QVariant& data);
+
+    /**
+     * @brief 初始化文本气泡
+     * @param text 文本内容
+     */
+    void initTextBubble(const QString& text);
+    
+    /**
+     * @brief 初始化图片气泡
+     * @param img 图片数据
+     */
+    void initImageBubble(const QPixmap& img);
+    
+    /**
+     * @brief 保存图片
+     */
+    void saveImage();
+    
+    /**
+     * @brief 显示图片查看器
+     */
+    void showViewer();
+
+private:
+    ChatRole m_role; ///< 消息角色
+    QHBoxLayout* m_layout; ///< 水平布局
+    QPixmap m_currentImage; ///< 当前图片数据
+};
+
+
+--- 文件结束: src\Ui\Components\ChatBubble.h ---
+
+--- 文件开始: src\Ui\Components\ImageViewer.cpp ---
+
+#include "ImageViewer.h"
+#include <QVBoxLayout>
+#include <QResizeEvent>
+#include <QScreen>
+#include <QApplication>
+#include <QTimer>
+
+ImageViewer::ImageViewer(const QPixmap& pixmap, QWidget* parent) : QDialog(parent) {
+    this->setWindowTitle("查看图片 (滚轮缩放/左键拖拽/双击还原)");
+    this->setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+
+    // 1. 设置合理的初始窗口大小 (屏幕的 70%)
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QSize screenSize = screen->availableGeometry().size();
+    this->resize(screenSize * 0.7);
+
+    // 2. 初始化 Graphics 体系
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    m_scene = new QGraphicsScene(this);
+    m_view = new QGraphicsView(m_scene, this);
+
+    // --- 关键设置 ---
+    // 开启抗锯齿，让图片缩放后依然平滑
+    m_view->setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+    // 开启“抓手”模式：左键按住拖拽
+    m_view->setDragMode(QGraphicsView::ScrollHandDrag);
+    // 隐藏滚动条 (我们用无限画布模式，通常不需要滚动条)
+    m_view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // 设置背景色为深灰
+    m_view->setStyleSheet("background-color: #1e1e1e; border: none;");
+    // 缩放时的锚点：以鼠标为中心缩放，体验最好
+    m_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+    m_view->setResizeAnchor(QGraphicsView::AnchorUnderMouse);
+
+    // 安装事件过滤器用于监听滚轮（因为 QGraphicsView 可能会吃掉滚轮事件）
+    m_view->viewport()->installEventFilter(this);
+
+    // 添加图片
+    m_item = new QGraphicsPixmapItem(pixmap);
+    m_scene->addItem(m_item);
+
+    layout->addWidget(m_view);
+
+    // 3. 初始状态：适应窗口
+    // 使用 Timer 延时 0ms 调用，确保 layout 完成后再计算大小
+    QTimer::singleShot(0, this, [=](){
+        fitImageToWindow();
+    });
+}
+
+// 核心逻辑：自动适配
+void ImageViewer::fitImageToWindow() {
+    if (!m_item || !m_view) return;
+
+    // Qt 神技：自动把 item 缩放到 view 的大小，并保持比例
+    m_view->fitInView(m_item, Qt::KeepAspectRatio);
+
+    // 标记为"自适应模式"
+    m_isFitWindow = true;
+}
+
+// 事件1: 窗口大小改变
+void ImageViewer::resizeEvent(QResizeEvent *event) {
+    QDialog::resizeEvent(event);
+
+    // 如果用户还没手动缩放过，那么窗口变大，图片也跟着变大
+    if (m_isFitWindow) {
+        fitImageToWindow();
+    }
+}
+
+// 事件2: 双击还原
+void ImageViewer::mouseDoubleClickEvent(QMouseEvent *event) {
+    Q_UNUSED(event);
+    // 双击任意地方，恢复到“适应窗口”状态
+    fitImageToWindow();
+}
+
+// 事件3: 滚轮缩放
+bool ImageViewer::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == m_view->viewport() && event->type() == QEvent::Wheel) {
+        QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
+
+        // 只要用户动了滚轮，就退出“自适应模式”
+        m_isFitWindow = false;
+
+        // 计算缩放比例
+        double angle = wheelEvent->angleDelta().y();
+        double factor;
+        if (angle > 0) {
+            factor = 1.15; // 放大 15%
+        } else {
+            factor = 1.0 / 1.15; // 缩小
+        }
+
+        // 执行缩放
+        m_view->scale(factor, factor);
+
+        return true; // 事件已处理，不再向下传递
+    }
+    return QDialog::eventFilter(watched, event);
+}
+
+
+--- 文件结束: src\Ui\Components\ImageViewer.cpp ---
+
+--- 文件开始: src\Ui\Components\ImageViewer.h ---
+
+/**
+ * @file ImageViewer.h
+ * @brief 图片查看器组件头文件
+ * 
+ * 该文件定义了ImageViewer类，提供图片查看功能，支持自适应显示、缩放和双击还原。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QDialog>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
+
+/**
+ * @brief 图片查看器类
+ * 
+ * 继承自QDialog，提供图片查看功能，支持自适应显示、鼠标滚轮缩放和双击还原操作。
+ */
+class ImageViewer : public QDialog {
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param pixmap 要显示的图片
+     * @param parent 父窗口指针
+     */
+    explicit ImageViewer(const QPixmap& pixmap, QWidget* parent = nullptr);
+
+protected:
+    /**
+     * @brief 窗口大小变化事件处理
+     * @param event 大小变化事件
+     * 
+     * 实现图片自适应窗口大小功能。
+     */
+    void resizeEvent(QResizeEvent *event) override;
+    
+    /**
+     * @brief 事件过滤器处理
+     * @param watched 被监视的对象
+     * @param event 事件
+     * @return bool 是否处理事件
+     * 
+     * 监听鼠标滚轮事件，实现图片缩放功能。
+     */
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    
+    /**
+     * @brief 鼠标双击事件处理
+     * @param event 鼠标事件
+     * 
+     * 监听双击事件，实现图片还原到自适应模式。
+     */
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+
+private:
+    /**
+     * @brief 图片自适应窗口功能
+     * 
+     * 核心功能：将图片适配到当前窗口大小。
+     */
+    void fitImageToWindow();
+
+private:
+    QGraphicsView* m_view;          ///< 图形视图窗口
+    QGraphicsScene* m_scene;        ///< 图形场景容器
+    QGraphicsPixmapItem* m_item;    ///< 图片图元对象
+
+    /**
+     * @brief 自适应窗口模式标记
+     * 
+     * true: 窗口变大，图片跟着变大（自适应模式）
+     * false: 用户已手动缩放，窗口变大不再影响图片比例
+     */
+    bool m_isFitWindow = true;
+};
+
+
+--- 文件结束: src\Ui\Components\ImageViewer.h ---
+
+--- 文件开始: src\Ui\Components\InputPanel.cpp ---
+
+#include "InputPanel.h"
+#include <QHBoxLayout>
+#include <QLabel>
+
+InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
+    this->setFixedHeight(120);
+    this->setStyleSheet("background-color: #343541; border-top: 1px solid #5D5D67;");
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(20, 20, 20, 20); // 调整边距
+    layout->setSpacing(15); // 控件间距
+
+    // 1. [新增] 参考图按钮 (使用 QToolButton)
+    m_btnRef = new QToolButton(this);
+    m_btnRef->setText("📎"); // 暂时用文字代替图标，以后换 QIcon
+    m_btnRef->setFixedSize(40, 40);
+    // 样式：正常是白色，禁用是灰色
+    m_btnRef->setStyleSheet(
+        "QToolButton { background-color: transparent; border: 1px solid #555; border-radius: 20px; color: white; font-size: 20px; }"
+        "QToolButton:hover { background-color: #444; }"
+        "QToolButton:disabled { color: #555; border-color: #333; }" // 禁用样式
+        );
+    layout->addWidget(m_btnRef);
+
+    // 2. 工作流按钮
+    m_btnWorkflow = new QPushButton("🎨 选择工作流", this);
+    m_btnWorkflow->setFixedSize(120, 40);
+    m_btnWorkflow->setStyleSheet(
+        "QPushButton { background-color: #40414F; color: white; border-radius: 4px; }"
+        "QPushButton:hover { background-color: #50515F; }"
+    );
+    layout->addWidget(m_btnWorkflow);
+
+    // 3. 真正的输入框 (替换模拟的QLabel)
+    m_inputEdit = new QLineEdit(this);
+    m_inputEdit->setPlaceholderText("输入提示词...");
+    m_inputEdit->setStyleSheet(
+        "QLineEdit { background-color: #40414F; color: white; border: 1px solid #555; border-radius: 4px; padding: 0 10px; }"
+        "QLineEdit:focus { border-color: #19C37D; }"
+        "QLineEdit::placeholder { color: #CCC; }"
+    );
+    m_inputEdit->setFixedHeight(40);
+    m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed); // 只有它会伸缩
+    layout->addWidget(m_inputEdit);
+
+    // 4. 生成按钮
+    m_btnGenerate = new QPushButton("生成", this);
+    m_btnGenerate->setFixedSize(80, 40);
+    m_btnGenerate->setStyleSheet(
+        "QPushButton { background-color: #19C37D; color: white; border-radius: 4px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #1AD48A; }"
+    );
+    layout->addWidget(m_btnGenerate);
+
+    // 连接信号槽
+    connect(m_btnGenerate, &QPushButton::clicked, this, &InputPanel::onGenerateClicked);
+    
+    // 连接回车键信号
+    connect(m_inputEdit, &QLineEdit::returnPressed, this, &InputPanel::onGenerateClicked);
+}
+
+void InputPanel::updateState(WorkflowType type) {
+    if (type == WorkflowType::TextToImage) {
+        m_btnRef->setEnabled(false); // 文生图禁用参考图
+        m_btnRef->setToolTip("当前工作流不需要参考图");
+    } else {
+        m_btnRef->setEnabled(true);  // 其他启用
+        m_btnRef->setToolTip("添加参考图");
+    }
+}
+
+void InputPanel::onGenerateClicked() {
+    QString prompt = m_inputEdit->text().trimmed();
+    if (!prompt.isEmpty()) {
+        emit generateClicked(prompt);
+        // 清空输入框
+        m_inputEdit->clear();
+    }
+}
+
+
+--- 文件结束: src\Ui\Components\InputPanel.cpp ---
+
+--- 文件开始: src\Ui\Components\InputPanel.h ---
+
+/**
+ * @file InputPanel.h
+ * @brief 输入面板组件头文件
+ * 
+ * 该文件定义了InputPanel类，作为应用程序底部的输入控制面板。
+ * 包含工作流按钮、参考图按钮和状态更新功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QPushButton>
+#include <QToolButton> // 使用 ToolButton 做纯图标按钮更合适
+#include <QLineEdit>
+#include "../../Model/WorkflowTypes.h"
+
+/**
+ * @brief 输入面板类
+ * 
+ * 继承自QWidget，提供工作流选择、参考图上传和文本输入功能。
+ * 包含按钮组件、输入框和状态管理功能。
+ */
+class InputPanel : public QWidget {
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit InputPanel(QWidget *parent = nullptr);
+
+    /**
+     * @brief 获取工作流按钮
+     * @return QPushButton* 工作流按钮指针
+     */
+    QPushButton* getWorkflowBtn() const { return m_btnWorkflow; }
+    
+    /**
+     * @brief 获取参考图按钮
+     * @return QToolButton* 参考图按钮指针
+     */
+    QToolButton* getRefBtn() const { return m_btnRef; }
+
+    /**
+     * @brief 获取生成按钮
+     * @return QPushButton* 生成按钮指针
+     */
+    QPushButton* getGenerateBtn() const { return m_btnGenerate; }
+
+    /**
+     * @brief 获取输入框
+     * @return QLineEdit* 输入框指针
+     */
+    QLineEdit* getInputEdit() const { return m_inputEdit; }
+
+    /**
+     * @brief 根据工作流类型更新UI状态
+     * @param type 工作流类型
+     */
+    void updateState(WorkflowType type);
+
+signals:
+    /**
+     * @brief 生成按钮点击信号
+     * @param prompt 输入的提示词文本
+     */
+    void generateClicked(const QString& prompt);
+
+private slots:
+    /**
+     * @brief 处理生成按钮点击
+     */
+    void onGenerateClicked();
+
+private:
+    QPushButton* m_btnWorkflow; ///< 工作流按钮
+    QToolButton* m_btnRef; ///< 参考图按钮
+    QLineEdit* m_inputEdit; ///< 输入框
+    QPushButton* m_btnGenerate; ///< 生成按钮
+};
+
+
+--- 文件结束: src\Ui\Components\InputPanel.h ---
+
+--- 文件开始: src\Ui\Components\ReferencePopup.cpp ---
+
+#include "ReferencePopup.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QDragEnterEvent>
+#include <QMimeData>
+#include <QFileDialog>
+#include <QStackedLayout>
+#include <QPainter>
+#include <QPainterPath>
+#include <QStandardPaths>
+#include <QFileInfo>
+
+ReferencePopup::ReferencePopup(QWidget *parent) : QWidget(parent) {
+    // 【重要】：允许拖拽
+    this->setAcceptDrops(true);
+
+    // 设置窗口属性
+    // 使用 Qt::Tool 而不是 Popup，防止点击外部时窗口自动关闭
+    // 同时配合 Qt::FramelessWindowHint 去掉边框
+    this->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    this->setAttribute(Qt::WA_TranslucentBackground);
+    
+    // 设置焦点策略，允许窗口获取焦点
+    this->setFocusPolicy(Qt::StrongFocus);
+
+    this->setFixedSize(320, 240); //稍微大一点
+
+    // 初始化成员变量，确保能记住已添加的参考图
+    m_currentImage = QPixmap();
+    m_currentPath.clear();
+
+    setupUi();
+}
+
+void ReferencePopup::setupUi() {
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+
+    // 1. 主容器（深色圆角背景）
+    QWidget* container = new QWidget(this);
+    container->setStyleSheet(
+        "QWidget { background-color: #2D2D2D; border: 1px solid #444; border-radius: 8px; }"
+        );
+    // 给 container 加阴影会更好看（这里省略，保持简洁）
+
+    QVBoxLayout* containerLayout = new QVBoxLayout(container);
+    containerLayout->setContentsMargins(15, 15, 15, 15);
+
+    // 2. 标题栏
+    QLabel* title = new QLabel("参考图 (Reference)", container);
+    title->setStyleSheet("color: #ECECF1; font-weight: bold; border: none;");
+    containerLayout->addWidget(title);
+
+    // 3. 堆栈布局 (核心：切换空状态和预览状态)
+    m_stackLayout = new QStackedLayout();
+
+    // --- 页面 A: 空状态 (拖拽区 + 按钮) ---
+    m_pageEmpty = new QWidget(container);
+    m_pageEmpty->setStyleSheet("background: transparent; border: none;");
+    QVBoxLayout* emptyLayout = new QVBoxLayout(m_pageEmpty);
+    emptyLayout->setContentsMargins(0, 10, 0, 0);
+
+    // 虚线框 Label
+    QLabel* lblDropZone = new QLabel("拖拽图片到此处\n\n或", m_pageEmpty);
+    lblDropZone->setAlignment(Qt::AlignCenter);
+    lblDropZone->setStyleSheet(
+        "QLabel { "
+        "  border: 2px dashed #555; "
+        "  border-radius: 6px; "
+        "  color: #888; "
+        "  background-color: #343541; "
+        "}"
+        );
+
+    // 上传按钮
+    QPushButton* btnUpload = new QPushButton("选择本地文件", m_pageEmpty);
+    btnUpload->setCursor(Qt::PointingHandCursor);
+    btnUpload->setFixedHeight(36);
+    btnUpload->setStyleSheet(
+        "QPushButton { background-color: #40414F; color: white; border-radius: 4px; border: none; }"
+        "QPushButton:hover { background-color: #50515F; }"
+        );
+    connect(btnUpload, &QPushButton::clicked, this, [=](){
+        QString path = QFileDialog::getOpenFileName(this, "选择参考图",
+                                                    QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
+                                                    "Images (*.png *.jpg *.jpeg *.bmp)");
+        if (!path.isEmpty()) {
+            loadImage(path);
+        }
+    });
+
+    emptyLayout->addWidget(lblDropZone);
+    emptyLayout->addWidget(btnUpload);
+
+    // --- 页面 B: 预览状态 (图片 + 删除按钮) ---
+    m_pagePreview = new QWidget(container);
+    m_pagePreview->setStyleSheet("background: transparent; border: none;");
+    QVBoxLayout* previewLayout = new QVBoxLayout(m_pagePreview);
+    previewLayout->setContentsMargins(0, 10, 0, 0);
+
+    // 图片预览区
+    m_lblPreview = new QLabel(m_pagePreview);
+    m_lblPreview->setAlignment(Qt::AlignCenter);
+    m_lblPreview->setStyleSheet("border: 1px solid #444; border-radius: 4px; background-color: #000;");
+    m_lblPreview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // 删除按钮
+    QPushButton* btnRemove = new QPushButton("🗑 移除参考图", m_pagePreview);
+    btnRemove->setCursor(Qt::PointingHandCursor);
+    btnRemove->setFixedHeight(36);
+    btnRemove->setStyleSheet(
+        "QPushButton { background-color: #7f1d1d; color: #fecaca; border-radius: 4px; border: none; }"
+        "QPushButton:hover { background-color: #991b1b; }"
+        );
+    connect(btnRemove, &QPushButton::clicked, this, [=](){
+        m_currentImage = QPixmap(); // 清空
+        m_currentPath.clear();
+        updateUiState(); // 回到空状态
+    });
+
+    previewLayout->addWidget(m_lblPreview);
+    previewLayout->addWidget(btnRemove);
+
+    // 将两个页面加入堆栈
+    m_stackLayout->addWidget(m_pageEmpty);
+    m_stackLayout->addWidget(m_pagePreview);
+
+    // 把堆栈加入主布局
+    containerLayout->addLayout(m_stackLayout);
+    mainLayout->addWidget(container);
+
+    // 初始状态
+    updateUiState();
+}
+
+void ReferencePopup::popup(const QPoint& pos) {
+    // 水平居中，垂直在按钮上方
+    int x = pos.x() - (this->width() / 2);
+    int y = pos.y() - this->height() - 10;
+    this->move(x, y);
+    this->show();
+    this->raise(); // 确保在最上层
+    this->setFocus(); // 获取焦点，用于处理焦点失去事件
+}
+
+void ReferencePopup::hide() {
+    QWidget::hide();
+    // 清除焦点，避免干扰其他窗口
+    this->clearFocus();
+}
+
+// ---------------------------------------------------------
+// 拖拽核心逻辑
+// ---------------------------------------------------------
+
+void ReferencePopup::dragEnterEvent(QDragEnterEvent *event) {
+    // 1. 检查是否有文件
+    if (event->mimeData()->hasUrls()) {
+        QList<QUrl> urls = event->mimeData()->urls();
+        if (urls.isEmpty()) return;
+
+        // 2. 检查后缀名是否是图片
+        QString filePath = urls.first().toLocalFile();
+        QFileInfo info(filePath);
+        QString suffix = info.suffix().toLower();
+
+        if (suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "bmp" || suffix == "webp") {
+            // 是图片，允许拖入
+            event->acceptProposedAction();
+        }
+    }
+}
+
+void ReferencePopup::dropEvent(QDropEvent *event) {
+    const QMimeData* mime = event->mimeData();
+    if (mime->hasUrls()) {
+        QString filePath = mime->urls().first().toLocalFile();
+        loadImage(filePath);
+        event->acceptProposedAction();
+    }
+}
+
+// ---------------------------------------------------------
+// 图片加载与渲染
+// ---------------------------------------------------------
+
+void ReferencePopup::loadImage(const QString& path) {
+    QPixmap img(path);
+    if (img.isNull()) return;
+
+    m_currentPath = path;
+    m_currentImage = img;
+
+    // 为了美观，我们需要根据 Label 的大小对图片进行缩放（保持比例）
+    // 注意：这里简单处理，实际渲染可能需要 resizeEvent 配合
+    QSize targetSize = m_lblPreview->size();
+    if (targetSize.isEmpty()) targetSize = QSize(280, 150); // 兜底尺寸
+
+    // 缩放图片
+    QPixmap scaled = img.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    m_lblPreview->setPixmap(scaled);
+
+    updateUiState();
+}
+
+void ReferencePopup::updateUiState() {
+    if (m_currentImage.isNull()) {
+        m_stackLayout->setCurrentWidget(m_pageEmpty);
+    } else {
+        m_stackLayout->setCurrentWidget(m_pagePreview);
+
+        // 如果是在预览页，这里也可以再次触发一下缩放，防止 label 大小未更新
+        if (!m_currentImage.isNull()) {
+            QSize s = QSize(280, 150);
+            m_lblPreview->setPixmap(m_currentImage.scaled(s, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }
+    }
+}
+
+
+--- 文件结束: src\Ui\Components\ReferencePopup.cpp ---
+
+--- 文件开始: src\Ui\Components\ReferencePopup.h ---
+
+/**
+ * @file ReferencePopup.h
+ * @brief 参考图上传弹窗组件头文件
+ * 
+ * 该文件定义了ReferencePopup类，作为参考图上传的浮动窗口。
+ * 支持拖拽上传图片、图片预览和状态管理功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QPixmap>
+
+class QLabel;
+class QStackedLayout;
+
+/**
+ * @brief 参考图上传弹窗类
+ * 
+ * 继承自QWidget，提供参考图上传功能，支持拖拽操作。
+ * 包含图片预览、状态切换和数据管理功能。
+ */
+class ReferencePopup : public QWidget {
+    Q_OBJECT
+
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit ReferencePopup(QWidget *parent = nullptr);
+
+    /**
+     * @brief 显示弹窗
+     * @param pos 弹窗显示位置
+     */
+    void popup(const QPoint& pos);
+    
+    /**
+     * @brief 隐藏弹窗
+     */
+    void hide();
+
+    /**
+     * @brief 获取当前图片
+     * @return QPixmap 当前图片
+     */
+    QPixmap currentImage() const { return m_currentImage; }
+    
+    /**
+     * @brief 获取图片路径
+     * @return QString 图片文件路径
+     */
+    QString currentPath() const { return m_currentPath; }
+    
+    /**
+     * @brief 检查是否有图片
+     * @return bool 是否有图片
+     */
+    bool hasImage() const { return !m_currentImage.isNull(); }
+
+protected:
+    /**
+     * @brief 拖拽进入事件处理
+     * @param event 拖拽进入事件
+     */
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    
+    /**
+     * @brief 拖拽释放事件处理
+     * @param event 拖拽释放事件
+     */
+    void dropEvent(QDropEvent *event) override;
+
+    // 焦点失去时隐藏（模拟 Popup 行为）
+    // void focusOutEvent(QFocusEvent *event) override;
+
+private:
+    /**
+     * @brief 初始化UI布局
+     */
+    void setupUi();
+    
+    /**
+     * @brief 加载图片处理逻辑
+     * @param path 图片文件路径
+     */
+    void loadImage(const QString& path);
+    
+    /**
+     * @brief 切换UI状态
+     */
+    void updateUiState();
+
+private:
+    // 数据
+    QPixmap m_currentImage; ///< 当前图片数据
+    QString m_currentPath; ///< 当前图片路径
+
+    // UI 组件
+    QStackedLayout* m_stackLayout; ///< 堆叠布局，用于界面切换
+    QWidget* m_pageEmpty; ///< 空状态页面
+    QWidget* m_pagePreview; ///< 预览状态页面
+
+    QLabel* m_lblPreview; ///< 图片预览标签
+};
+
+
+--- 文件结束: src\Ui\Components\ReferencePopup.h ---
+
+--- 文件开始: src\Ui\Components\SessionItem.cpp ---
+
+#include "SessionItem.h"
+#include <QApplication>
+#include <QClipboard>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QFontMetrics>
+#include <QResizeEvent>
+
+SessionItem::SessionItem(int id, const QString& title, QWidget *parent)
+    : QWidget(parent), m_id(id), m_fullTitle(title)
+{
+    this->setAttribute(Qt::WA_StyledBackground, true);
+    this->setFixedHeight(50);
+    // 默认透明
+    this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
+    setupUi();
+}
+
+void SessionItem::setupUi()
+{
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(10, 0, 5, 0);
+    layout->setSpacing(0);
+
+    // 1. 标题
+    m_lblTitle = new QLabel(this);
+    m_lblTitle->setStyleSheet("color: #ECECF1; font-size: 13px; background: transparent;border: none;");
+    m_lblTitle->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    m_lblTitle->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+
+    // 2. 菜单按钮
+    m_btnOption = new QToolButton(this);
+    m_btnOption->setText("···");
+    m_btnOption->setFixedSize(30, 30);
+    m_btnOption->setCursor(Qt::PointingHandCursor);
+
+    // 【核心修复】：加上 border: none; 消除那个灰线
+    // 默认状态：完全透明，连边框都不要
+    m_btnOption->setStyleSheet(
+        "QToolButton { "
+        "    border: none; "             // <--- 这一行去掉灰线
+        "    background: transparent; "  // <--- 背景透明
+        "    color: transparent; "       // <--- 文字透明(看起来像隐藏了)
+        "}"
+        );
+
+    connect(m_btnOption, &QToolButton::clicked, this, &SessionItem::showMenu);
+
+    layout->addWidget(m_lblTitle);
+    layout->addWidget(m_btnOption);
+
+    updateTitleText();
+}
+
+void SessionItem::enterEvent(QEnterEvent *event)
+{
+    if (!m_isSelected) {
+        this->setStyleSheet("SessionItem { background-color: #2A2B32; border-radius: 6px; }");
+    }
+
+    // 悬浮时：文字变白，背景变深灰
+    // 同样记得带上 border: none，否则悬浮时线又出来了
+    m_btnOption->setStyleSheet(
+        "QToolButton { "
+        "    color: #ECECF1; "
+        "    background-color: #40414F; "
+        "    border-radius: 4px; "
+        "    border: none; "          // <--- 保持无边框
+        "    font-weight: bold; "
+        "}"
+        "QToolButton:hover { color: white; background-color: #50515F; }" // 按钮自己的hover效果
+        );
+
+    QWidget::enterEvent(event);
+}
+
+void SessionItem::leaveEvent(QEvent *event)
+{
+    if (!m_isSelected) {
+        this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
+    }
+
+    // 离开时：变回完全透明（占位但不显示）
+    // 依然要带上 border: none
+    m_btnOption->setStyleSheet(
+        "QToolButton { "
+        "    border: none; "
+        "    background: transparent; "
+        "    color: transparent; "
+        "}"
+        );
+
+    QWidget::leaveEvent(event);
+}
+
+void SessionItem::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        // 发送 this 指针，方便 SessionList 直接操作
+        emit itemClicked(this);
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void SessionItem::setSelected(bool selected)
+{
+    m_isSelected = selected;
+    if (selected) {
+        // 选中态
+        this->setStyleSheet("SessionItem { background-color: #343541; border-radius: 6px; border: 1px solid #565869; }");
+    } else {
+        // 非选中态
+        this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
+    }
+}
+
+void SessionItem::setTitle(const QString& newTitle)
+{
+    m_fullTitle = newTitle;
+    updateTitleText();
+}
+
+void SessionItem::resizeEvent(QResizeEvent *event)
+{
+    updateTitleText();
+    QWidget::resizeEvent(event);
+}
+
+void SessionItem::updateTitleText()
+{
+    // 计算宽度：总宽 - 按钮宽 - 左右边距余量
+    int availableWidth = this->width() - m_btnOption->width() - 20;
+    if (availableWidth <= 0) return;
+
+    QFontMetrics metrics(m_lblTitle->font());
+    QString elidedText = metrics.elidedText(m_fullTitle, Qt::ElideRight, availableWidth);
+    m_lblTitle->setText(elidedText);
+
+    // 这样无论鼠标什么时候移上来，Tooltip 早就准备好了
+    if (elidedText != m_fullTitle) {
+        this->setToolTip(m_fullTitle);
+    } else {
+        this->setToolTip(""); // 没截断就清空，防止显示多余的提示
+    }
+}
+
+// 弹出右键菜单
+void SessionItem::showMenu()
+{
+    QMenu menu(this);
+    // 设置 QMenu 的样式，让它匹配黑暗主题
+    menu.setStyleSheet("QMenu { background-color: #2D2D2D; color: white; border: 1px solid #555; border-radius: 8px }"
+                       "QMenu::item:selected { background-color: #40414F; }");
+
+    // 1. 添加重命名动作
+    QAction* actRename = menu.addAction("✎ 重命名");
+    connect(actRename, &QAction::triggered, this, [=](){
+        bool ok;
+        // 弹出输入框
+        QString text = QInputDialog::getText(this, "重命名会话",
+                                             "请输入新名称:", QLineEdit::Normal,
+                                             m_fullTitle, &ok);
+        // 如果用户点了OK且输入不为空
+        if (ok && !text.isEmpty()) {
+            setTitle(text); // 更新 UI
+            emit itemRenamed(m_id, text); // 通知外部/数据库
+        }
+    });
+
+    // 2. 添加复制动作
+    QAction* actCopy = menu.addAction("❐ 复制标题");
+    connect(actCopy, &QAction::triggered, this, [=](){
+        // 获取系统剪贴板并写入
+        QClipboard *clipboard = QApplication::clipboard();
+        clipboard->setText(m_fullTitle);
+    });
+
+    // 加一条横线分隔
+    menu.addSeparator();
+
+    // 3. 添加删除动作
+    QAction* actDelete = menu.addAction("🗑 删除会话");
+    connect(actDelete, &QAction::triggered, this, [=](){
+        // 删除是危险操作，必须二次确认
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "确认删除", "确定要删除这个会话吗？\n此操作无法撤销。",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (reply == QMessageBox::Yes) {
+            emit itemDeleted(m_id); // 发送删除信号
+        }
+    });
+
+    // 在按钮的正下方弹出菜单
+    // mapToGlobal: 把按钮相对于窗口的坐标(0, height)转换成屏幕绝对坐标
+    menu.exec(m_btnOption->mapToGlobal(QPoint(0, m_btnOption->height())));
+}
+
+
+--- 文件结束: src\Ui\Components\SessionItem.cpp ---
+
+--- 文件开始: src\Ui\Components\SessionItem.h ---
+
+/**
+ * @file SessionItem.h
+ * @brief 会话项组件头文件
+ * 
+ * 该文件定义了SessionItem类，作为会话列表中的单个会话项。
+ * 包含会话标题显示、选中状态、右键菜单和事件处理功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+
+#include <QWidget>
+#include <QLabel>
+#include <QToolButton>
+#include <QHBoxLayout>
+#include <QMenu>
+
+class QLabel;
+class QToolButton;
+
+/**
+ * @brief 会话项类
+ * 
+ * 继承自QWidget，表示会话列表中的单个会话项目。
+ * 支持选中状态、标题编辑、删除和重命名操作。
+ */
+class SessionItem : public QWidget
+{
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param id 会话ID
+     * @param title 会话标题
+     * @param parent 父窗口指针
+     */
+    explicit SessionItem(int id, const QString& title, QWidget *parent = nullptr);
+
+    /**
+     * @brief 获取会话ID
+     * @return int 会话ID
+     */
+    int id() const { return m_id; }
+
+    /**
+     * @brief 设置选中状态
+     * @param selected 是否选中
+     */
+    void setSelected(bool selected);
+
+    /**
+     * @brief 更新标题
+     * @param newTitle 新标题
+     */
+    void setTitle(const QString& newTitle);
+
+signals:
+    /**
+     * @brief 项点击信号
+     * @param item 被点击的会话项指针
+     */
+    void itemClicked(SessionItem* item);
+    
+    /**
+     * @brief 项删除信号
+     * @param id 被删除的会话ID
+     */
+    void itemDeleted(int id);
+    
+    /**
+     * @brief 项重命名信号
+     * @param id 被重命名的会话ID
+     * @param newName 新会话名称
+     */
+    void itemRenamed(int id, const QString& newName);
+
+protected:
+    /**
+     * @brief 鼠标进入事件处理
+     * @param event 鼠标进入事件
+     */
+    void enterEvent(QEnterEvent *event) override;
+    
+    /**
+     * @brief 鼠标离开事件处理
+     * @param event 鼠标离开事件
+     */
+    void leaveEvent(QEvent *event) override;
+    
+    /**
+     * @brief 鼠标按下事件处理
+     * @param event 鼠标按下事件
+     */
+    void mousePressEvent(QMouseEvent *event) override;
+    
+    /**
+     * @brief 窗口大小改变事件处理
+     * @param event 大小改变事件
+     */
+    void resizeEvent(QResizeEvent *event) override;
+
+private:
+    /**
+     * @brief 初始化UI布局
+     */
+    void setupUi();
+    
+    /**
+     * @brief 更新标题文本显示
+     */
+    void updateTitleText();
+    
+    /**
+     * @brief 显示右键菜单
+     */
+    void showMenu();
+
+private:
+    int m_id; ///< 会话ID
+    QString m_fullTitle; ///< 完整标题
+    bool m_isSelected = false; ///< 是否选中状态
+
+    QLabel *m_lblTitle; ///< 标题标签
+    QToolButton *m_btnOption; ///< 选项按钮
+};
+
+
+--- 文件结束: src\Ui\Components\SessionItem.h ---
+
+--- 文件开始: src\Ui\Components\SessionList.cpp ---
+
+#include "SessionList.h"
+#include "SessionItem.h"
+#include <QPushButton>
+#include <QLabel>
+#include <QScrollArea>
+#include <QScrollBar> // 用于美化滚动条
+
+SessionList::SessionList(QWidget *parent)
+    : QWidget(parent)
+    , m_currentSessionItem(nullptr)
+{
+    setupUi();
+
+    // 测试数据：多加几个，看看滚动效果
+    addSession(1001, "😺 赛博朋克猫咪");
+    addSession(1002, "🌄 富士山风景生成");
+    addSession(1003, "🎨 Logo 设计草图");
+    addSession(1004, "🤖 代码助手测试");
+    addSession(1005, "📝 待办事项列表");
+    addSession(1006, "🌍 3D 地球模型");
+    addSession(1007, "🎵 Lo-Fi 音乐生成");
+    addSession(1008, "🎮 游戏资产概念图");
+    addSession(1009, "📈 财报分析助手");
+    addSession(1010, "🐍 Python 脚本优化");
+}
+
+void SessionList::setupUi()
+{
+    // 1. 设置侧边栏基本属性
+    this->setFixedWidth(260);
+    this->setStyleSheet("background-color: #202123; border-right: 1px solid #4D4D4F;");
+
+    // 2. 最外层布局 (垂直)
+    QVBoxLayout* rootLayout = new QVBoxLayout(this);
+    rootLayout->setContentsMargins(0, 20, 0, 0); // 顶部留白，左右下贴边
+    rootLayout->setSpacing(10);
+
+    // 3. 固定在顶部的“新建会话”按钮
+    // 为了让按钮左右有间距，我们给它包一层容器，或者直接设置 margin
+    QWidget* topContainer = new QWidget(this);
+    QVBoxLayout* topLayout = new QVBoxLayout(topContainer);
+    topLayout->setContentsMargins(10, 0, 10, 0); // 按钮左右留白
+
+    m_btnNew = new QPushButton("+ 新建会话", this);
+    m_btnNew->setFixedHeight(45);
+    m_btnNew->setCursor(Qt::PointingHandCursor);
+    m_btnNew->setStyleSheet(
+        "QPushButton { "
+        "   background-color: transparent; "
+        "   border: 1px solid #565869; "
+        "   border-radius: 5px; "
+        "   color: white; "
+        "   text-align: left; "
+        "   padding-left: 15px;"
+        "}"
+        "QPushButton:hover { background-color: #2A2B32; }"
+        );
+    connect(m_btnNew, &QPushButton::clicked, this, &SessionList::createNewSessionRequest);
+
+    topLayout->addWidget(m_btnNew);
+    rootLayout->addWidget(topContainer);
+
+    // 4. 创建滚动区域 (QScrollArea)
+    QScrollArea* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true); // 关键：让内部容器宽度自适应 ScrollArea
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 只要垂直滚动，不要水平
+    scrollArea->setFrameShape(QFrame::NoFrame); // 去掉 ScrollArea 自带的边框
+
+    // 美化滚动条 (QSS) - 这一大段是为了让滚动条变细、变深色
+    scrollArea->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollBar:vertical { border: none; background: #202123; width: 8px; margin: 0px; }"
+        "QScrollBar::handle:vertical { background: #4D4D4F; min-height: 20px; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+        );
+
+    // 5. 创建滚动区域内部的“容器画布”
+    QWidget* scrollContent = new QWidget();
+    scrollContent->setStyleSheet("background: transparent;"); // 必须透明，否则会挡住背景
+
+    // 6. 内部布局 (用来放 Label 和 SessionItem)
+    m_scrollLayout = new QVBoxLayout(scrollContent);
+    m_scrollLayout->setContentsMargins(10, 10, 10, 10); // 内容的边距
+    m_scrollLayout->setSpacing(5);
+
+    // 添加标题
+    QLabel* labelTitle = new QLabel("最近历史", scrollContent);
+    labelTitle->setStyleSheet("color: #8E8EA0; font-size: 12px; margin-bottom: 5px; border: none;");
+    m_scrollLayout->addWidget(labelTitle);
+
+    // 7. 组装：把容器塞进 ScrollArea，把 ScrollArea 塞进最外层布局
+    scrollArea->setWidget(scrollContent);
+    rootLayout->addWidget(scrollArea);
+
+    // 8. 添加弹簧 (Stretch)
+    // 把它放在内部布局的最后，把 Item 往上顶
+    m_scrollLayout->addStretch();
+}
+
+void SessionList::addSession(int id, const QString& title)
+{
+    SessionItem* item = new SessionItem(id, title, this);
+
+    // --- 信号连接部分保持不变 ---
+    connect(item, &SessionItem::itemClicked, this, [=](SessionItem* clickedItem){
+        handleItemSelection(clickedItem);
+        emit sessionSwitchRequest(clickedItem->id());
+    });
+
+    connect(item, &SessionItem::itemRenamed, this, [=](int itemId, const QString& newName){
+        emit sessionRenameRequest(itemId, newName);
+    });
+
+    connect(item, &SessionItem::itemDeleted, this, [=](int deletedId){
+        if (m_currentSessionItem == item) {
+            m_currentSessionItem = nullptr;
+        }
+        emit sessionDeleteRequest(deletedId);
+
+        // 【注意】这里要从 m_scrollLayout 移除，而不是 m_mainLayout
+        m_scrollLayout->removeWidget(item);
+        item->deleteLater();
+    });
+
+    // ---------------------------------------------------------
+    // 插入 UI
+    // ---------------------------------------------------------
+
+    // 【注意】插入到 m_scrollLayout，且在弹簧之前
+    m_scrollLayout->insertWidget(m_scrollLayout->count() - 1, item);
+
+    if (m_currentSessionItem == nullptr) {
+        handleItemSelection(item);
+    }
+}
+
+// handleItemSelection 保持不变...
+void SessionList::handleItemSelection(SessionItem* clickedItem)
+{
+    if (m_currentSessionItem == clickedItem) return;
+    if (m_currentSessionItem) m_currentSessionItem->setSelected(false);
+    if (clickedItem) clickedItem->setSelected(true);
+    m_currentSessionItem = clickedItem;
+}
+
+
+--- 文件结束: src\Ui\Components\SessionList.cpp ---
+
+--- 文件开始: src\Ui\Components\SessionList.h ---
+
+/**
+ * @file SessionList.h
+ * @brief 会话列表组件头文件
+ * 
+ * 该文件定义了SessionList类，作为应用程序左侧的会话管理面板。
+ * 包含会话项的添加、选择、删除、重命名等功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+
+#include <QWidget>
+#include <QVBoxLayout>
+#include <QList>
+#include <QScrollArea>
+
+class SessionItem;
+class QPushButton;
+
+/**
+ * @brief 会话列表类
+ * 
+ * 继承自QWidget，管理多个会话项，提供会话的增删改查功能。
+ * 支持会话切换、删除、重命名和新建操作。
+ */
+class SessionList : public QWidget
+{
+    Q_OBJECT
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit SessionList(QWidget *parent = nullptr);
+    
+    /**
+     * @brief 添加新会话
+     * @param id 会话ID
+     * @param title 会话标题
+     */
+    void addSession(int id, const QString& title);
+
+signals:
+    /**
+     * @brief 会话切换请求信号
+     * @param id 目标会话ID
+     */
+    void sessionSwitchRequest(int id);
+    
+    /**
+     * @brief 会话删除请求信号
+     * @param id 目标会话ID
+     */
+    void sessionDeleteRequest(int id);
+    
+    /**
+     * @brief 会话重命名请求信号
+     * @param id 目标会话ID
+     * @param newName 新会话名称
+     */
+    void sessionRenameRequest(int id, const QString& newName);
+    
+    /**
+     * @brief 新建会话请求信号
+     */
+    void createNewSessionRequest();
+
+private:
+    /**
+     * @brief 初始化UI布局
+     */
+    void setupUi();
+
+    /**
+     * @brief 处理会话项选择事件
+     * @param clickedItem 被点击的会话项指针
+     */
+    void handleItemSelection(SessionItem* clickedItem);
+
+private:
+    QVBoxLayout* m_mainLayout; ///< 主布局
+    QVBoxLayout* m_scrollLayout; ///< 滚动区域布局
+    QPushButton* m_btnNew; ///< 新建会话按钮
+
+    SessionItem* m_currentSessionItem = nullptr; ///< 当前选中的会话项指针
+};
+
+
+--- 文件结束: src\Ui\Components\SessionList.h ---
+
+--- 文件开始: src\Ui\Components\WorkflowCard.cpp ---
+
+/**
+ * @file WorkflowCard.cpp
+ * @brief 工作流卡片组件实现文件
+ * 
+ * 该文件实现了WorkflowCard类，用于显示工作流卡片，支持静态图片和GIF动画背景，
+ * 包含鼠标悬停效果、缩放动画和文字信息展示功能。
+ * 
+ * @author 系统自动生成
+ * @version 1.0
+ * @date 2024
+ */
+
+#include "WorkflowCard.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPainter>
+#include <QEnterEvent>
+#include <QMouseEvent>
+#include <QDebug>
+#include <QLinearGradient>
+#include <QPixmap>
+#include <QFile>
+#include <QPainterPath>
+#include <QMovie>
+
+/**
+ * @brief WorkflowCard构造函数
+ * @param info 工作流信息结构体，包含名称、描述、图片路径等
+ * @param parent 父窗口指针
+ * 
+ * 初始化工作流卡片，设置UI布局、动画效果和事件处理。
+ * 支持GIF动画的延迟初始化以优化性能。
+ */
+WorkflowCard::WorkflowCard(const WorkflowInfo& info, QWidget* parent)
+    : QWidget(parent)
+    , m_info(info)
+    , m_scale(1.0)
+    , m_currentScale(1.0)
+    , m_isHovering(false)
+    , m_backgroundLabel(nullptr)
+{
+    setupUi();
+    
+    // 设置缩放动画
+    m_scaleAnimation->setDuration(200);
+    m_scaleAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    
+    // 初始化GIF动画 - 延迟初始化
+    if (!m_info.gifPath.isEmpty()) {
+        m_movie = nullptr; // 延迟初始化，在enterEvent中创建
+        qDebug() << "GIF路径已设置，将延迟初始化:" << m_info.gifPath;
+    }
+    
+    // 添加阴影效果
+    auto *shadowEffect = new QGraphicsDropShadowEffect(this);
+    shadowEffect->setBlurRadius(15);
+    shadowEffect->setColor(QColor(0, 0, 0, 80));
+    shadowEffect->setOffset(0, 5);
+    this->setGraphicsEffect(shadowEffect);
+    
+    // 设置鼠标跟踪
+    this->setMouseTracking(true);
+}
+
+/**
+ * @brief 设置UI界面
+ * 
+ * 创建卡片的主要UI组件，包括背景图片、文字容器、名称和描述标签。
+ * 设置16:9比例的卡片大小，并配置样式表和布局。
+ */
+void WorkflowCard::setupUi()
+{
+    // 设置16:9比例的卡片大小 (320x180)
+    this->setFixedSize(320, 180);
+    this->setStyleSheet(
+        "WorkflowCard {"
+        "    background-color: #252525;"
+        "    border: 1px solid #444444;"
+        "    border-radius: 12px;"
+        "}"
+        "WorkflowCard:hover {"
+        "    border: 1px solid #666666;"
+        "}"
+    );
+    
+    // 主布局
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+    
+    // 创建背景图片标签
+    m_backgroundLabel = new QLabel(this);
+    m_backgroundLabel->setFixedSize(320, 180);
+    m_backgroundLabel->setScaledContents(true);
+    m_backgroundLabel->lower(); // 确保背景在最底层
+    
+    // 文字容器（在最左上角）
+    QWidget *textContainer = new QWidget(m_backgroundLabel);
+    textContainer->setStyleSheet(
+        "background: rgba(0, 0, 0, 120);"
+        "border-radius: 8px;"
+    );
+    textContainer->setGeometry(0, 0, 288, 80); // 增加高度以容纳更大的文字
+    
+    QVBoxLayout *textLayout = new QVBoxLayout(textContainer);// 设置布局边距和间距
+    textLayout->setContentsMargins(8, 8, 8, 8); // 调整边距以适应更大的容器
+    textLayout->setSpacing(6); // 增加间距以适应更大的文字
+    textLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    
+    // 名称标签
+    m_nameLabel = new QLabel(m_info.name, textContainer);
+    m_nameLabel->setStyleSheet(
+        "font-size: 18px;"
+        "font-weight: 600;"
+        "color: white;"
+        "background: transparent;"
+        "padding: 0;"
+        "margin: 0;"
+        "border: none"
+    );
+    
+    // 描述标签
+    m_descriptionLabel = new QLabel(m_info.description, textContainer);
+    m_descriptionLabel->setStyleSheet(
+        "font-size: 14px;"
+        "font-weight: 400;"
+        "color: #cccccc;"
+        "background: transparent;"
+        "padding: 0;"
+        "margin: 0;"
+        "border: none;"
+        "min-height: 40px;" // 增加最小高度
+    );
+    m_descriptionLabel->setWordWrap(true);
+    m_descriptionLabel->setMaximumWidth(250);
+    m_descriptionLabel->setMinimumHeight(40); // 设置最小高度
+    
+    textLayout->addWidget(m_nameLabel);
+    textLayout->addWidget(m_descriptionLabel);
+    
+    mainLayout->addWidget(m_backgroundLabel);
+    
+    // 创建缩放动画
+    m_scaleAnimation = new QPropertyAnimation(this, "scale", this);
+    
+    // 设置初始静态图片
+    updateBackgroundImage();
+}
+
+/**
+ * @brief 更新背景图片
+ * 
+ * 根据当前状态更新背景图片，优先使用GIF动画的当前帧，
+ * 如果没有GIF动画则使用静态图片，如果都没有则使用默认背景。
+ */
+void WorkflowCard::updateBackgroundImage()
+{
+    // 如果有GIF动画正在播放，使用GIF当前帧
+    if (m_movie && m_movie->isValid() && m_movie->state() == QMovie::Running) {
+        QPixmap currentFrame = m_movie->currentPixmap();
+        if (!currentFrame.isNull()) {
+            m_backgroundLabel->setPixmap(currentFrame);
+            m_backgroundLabel->setVisible(true);
+            qDebug() << "更新背景图片为GIF当前帧";
+        } else {
+            qDebug() << "GIF当前帧为空";
+        }
+    } else {
+        // 使用静态图片
+        if (!m_info.imagePath.isEmpty()) {
+            QPixmap pixmap(m_info.imagePath);
+            if (!pixmap.isNull()) {
+                m_backgroundLabel->setPixmap(pixmap);
+                m_backgroundLabel->setVisible(true);
+                qDebug() << "更新背景图片为静态图片:" << m_info.imagePath;
+            } else {
+                qDebug() << "无法加载静态图片:" << m_info.imagePath;
+                // 使用默认背景
+                QPixmap defaultPixmap(320, 180);
+                defaultPixmap.fill(QColor(40, 40, 40));
+                m_backgroundLabel->setPixmap(defaultPixmap);
+            }
+        } else {
+            m_backgroundLabel->clear();
+            m_backgroundLabel->setVisible(false);
+            qDebug() << "背景图片路径为空，隐藏背景";
+        }
+    }
+}
+
+/**
+ * @brief 设置卡片缩放比例
+ * @param scale 缩放比例值
+ * 
+ * 设置卡片的缩放比例，限制在0.5到2.0之间，
+ * 触发重绘并发出缩放变化信号。
+ */
+void WorkflowCard::setScale(qreal scale)
+{
+    // 限制缩放范围在0.5到2.0之间
+    qreal boundedScale = qBound(0.5, scale, 2.0);
+    
+    if (m_scale != boundedScale) {
+        m_scale = boundedScale;
+        m_currentScale = boundedScale;
+        
+        // 触发重绘以应用新的缩放
+        this->update();
+        
+        // 可选：发出缩放变化信号
+        emit scaleChanged(m_scale);
+    }
+}
+
+/**
+ * @brief 鼠标进入事件处理
+ * @param event 鼠标进入事件
+ * 
+ * 处理鼠标悬停效果，开始GIF动画，更新背景图片和鼠标样式。
+ */
+void WorkflowCard::enterEvent(QEnterEvent *event)
+{
+    m_isHovering = true;
+    
+    // 移除缩放动画，保持卡片原始大小
+    // 开始GIF动画
+    startGifAnimation();
+    
+    // 更新背景图片
+    updateBackgroundImage();
+    
+    // 更新鼠标样式
+    this->setCursor(Qt::PointingHandCursor);
+    
+    QWidget::enterEvent(event);
+}
+
+/**
+ * @brief 鼠标离开事件处理
+ * @param event 鼠标离开事件
+ * 
+ * 处理鼠标离开效果，停止GIF动画，恢复背景图片和鼠标样式。
+ */
+void WorkflowCard::leaveEvent(QEvent *event)
+{
+    m_isHovering = false;
+    
+    // 停止GIF动画
+    stopGifAnimation();
+    
+    // 更新背景图片
+    updateBackgroundImage();
+    
+    // 恢复鼠标样式
+    this->setCursor(Qt::ArrowCursor);
+    
+    QWidget::leaveEvent(event);
+}
+
+/**
+ * @brief 鼠标按下事件处理
+ * @param event 鼠标事件
+ * 
+ * 处理鼠标点击事件，当左键点击时发出clicked信号。
+ */
+void WorkflowCard::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        emit clicked(m_info);
+    }
+    QWidget::mousePressEvent(event);
+}
+
+/**
+ * @brief 窗口大小改变事件处理
+ * @param event 大小改变事件
+ * 
+ * 处理窗口大小改变，触发重绘以确保UI正确显示。
+ */
+void WorkflowCard::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    this->update(); // 直接调用update()触发重绘
+}
+
+/**
+ * @brief 绘制事件处理
+ * @param event 绘制事件
+ * 
+ * 重写绘制事件，明确不处理背景绘制，完全由QLabel负责。
+ * 此方法仅保留作为占位，确保不会意外绘制背景。
+ */
+void WorkflowCard::paintEvent(QPaintEvent *event)
+{
+    // 明确不处理背景绘制，完全由QLabel负责
+    // 此方法仅保留作为占位，确保不会意外绘制背景
+    QWidget::paintEvent(event);
+}
+
+/**
+ * @brief 开始GIF动画
+ * 
+ * 延迟初始化GIF动画，连接帧更新信号，启动动画播放。
+ * 支持GIF动画的缓存和错误处理。
+ */
+void WorkflowCard::startGifAnimation()
+{
+    // 延迟初始化GIF
+    if (!m_info.gifPath.isEmpty() && !m_movie) {
+        qDebug() << "延迟初始化GIF:" << m_info.gifPath;
+        m_movie = new QMovie(m_info.gifPath, QByteArray(), this);
+        m_movie->setCacheMode(QMovie::CacheAll);
+        
+        if (!m_movie->isValid()) {
+            qDebug() << "无法加载GIF:" << m_info.gifPath << "错误:" << m_movie->lastErrorString();
+            delete m_movie;
+            m_movie = nullptr;
+            return;
+        }
+        
+        qDebug() << "成功加载GIF:" << m_info.gifPath << "帧数:" << m_movie->frameCount();
+        
+        // 连接GIF帧更新信号，触发重绘
+        connect(m_movie, &QMovie::frameChanged, this, [this](int frameNumber) {
+            Q_UNUSED(frameNumber)
+            updateBackgroundImage();
+        });
+    }
+    
+    if (m_movie && m_movie->isValid()) {
+        qDebug() << "启动GIF动画:" << m_info.gifPath;
+        m_movie->start();
+        
+        // 确保GIF正在播放
+        if (m_movie->state() != QMovie::Running) {
+            qDebug() << "GIF未能启动，状态:" << m_movie->state();
+        }
+        
+        // 更新背景图片
+        updateBackgroundImage();
+    } else {
+        qDebug() << "无法启动GIF动画，movie无效或路径为空";
+    }
+}
+
+/**
+ * @brief 停止GIF动画
+ * 
+ * 停止GIF动画播放，重置到第一帧，确保下次播放从头开始。
+ */
+void WorkflowCard::stopGifAnimation()
+{
+    if (m_movie && m_movie->isValid()) {
+        qDebug() << "停止GIF动画:" << m_info.gifPath;
+        m_movie->stop();
+        
+        // 重置GIF到第一帧，确保下次播放从头开始
+        m_movie->jumpToFrame(0);
+        
+        // 更新背景图片
+        updateBackgroundImage();
+    }
+}
+
+
+--- 文件结束: src\Ui\Components\WorkflowCard.cpp ---
+
+--- 文件开始: src\Ui\Components\WorkflowCard.h ---
+
+/**
+ * @file WorkflowCard.h
+ * @brief 工作流卡片组件头文件
+ * 
+ * 该文件定义了WorkflowCard类，用于显示工作流卡片，支持静态图片和GIF动画背景，
+ * 包含鼠标悬停效果、缩放动画和文字信息展示功能。
+ * 
+ * @author 系统自动生成
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QLabel>
+#include <QMovie>
+#include <QPropertyAnimation>
+#include <QGraphicsDropShadowEffect>
+#include "../../Model/WorkflowTypes.h"
+
+/**
+ * @class WorkflowCard
+ * @brief 工作流卡片组件类
+ * 
+ * 该类实现了一个可交互的工作流卡片，支持以下功能：
+ * - 显示工作流名称和描述
+ * - 支持静态图片和GIF动画背景
+ * - 鼠标悬停时播放GIF动画
+ * - 缩放动画效果
+ * - 点击事件处理
+ */
+class WorkflowCard : public QWidget {
+    Q_OBJECT
+    // 添加一个属性用于缩放动画
+    Q_PROPERTY(qreal scale READ scale WRITE setScale)
+
+public:
+    /**
+     * @brief 构造函数
+     * @param info 工作流信息结构体
+     * @param parent 父窗口指针
+     */
+    explicit WorkflowCard(const WorkflowInfo& info, QWidget* parent = nullptr);
+    
+    /**
+     * @brief 获取工作流信息
+     * @return 工作流信息结构体引用
+     */
+    const WorkflowInfo& workflowInfo() const { return m_info; }
+    
+    /**
+     * @brief 获取当前缩放比例
+     * @return 缩放比例值
+     */
+    qreal scale() const { return m_scale; }
+    
+    /**
+     * @brief 设置缩放比例
+     * @param scale 缩放比例值
+     */
+    void setScale(qreal scale);
+
+signals:
+    /**
+     * @brief 卡片点击信号
+     * @param info 被点击的工作流信息
+     */
+    void clicked(const WorkflowInfo& info);
+    
+    /**
+     * @brief 缩放变化信号
+     * @param scale 新的缩放比例值
+     */
+    void scaleChanged(qreal scale);
+
+protected:
+    /**
+     * @brief 绘制事件处理
+     * @param event 绘制事件
+     */
+    void paintEvent(QPaintEvent* event) override;
+    
+    /**
+     * @brief 鼠标进入事件处理
+     * @param event 鼠标进入事件
+     */
+    void enterEvent(QEnterEvent* event) override;
+    
+    /**
+     * @brief 鼠标离开事件处理
+     * @param event 鼠标离开事件
+     */
+    void leaveEvent(QEvent* event) override;
+    
+    /**
+     * @brief 鼠标按下事件处理
+     * @param event 鼠标事件
+     */
+    void mousePressEvent(QMouseEvent* event) override;
+    
+    /**
+     * @brief 窗口大小改变事件处理
+     * @param event 大小改变事件
+     */
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    /**
+     * @brief 设置UI界面
+     */
+    void setupUi();
+    
+    /**
+     * @brief 开始GIF动画
+     */
+    void startGifAnimation();
+    
+    /**
+     * @brief 停止GIF动画
+     */
+    void stopGifAnimation();
+    
+    /**
+     * @brief 更新背景图片
+     */
+    void updateBackgroundImage();
+
+private:
+    WorkflowInfo m_info;              ///< 工作流信息
+    qreal m_scale = 1.0;              ///< 当前缩放比例
+    qreal m_currentScale = 1.0;       ///< 实际缩放比例
+    bool m_isHovering = false;        ///< 鼠标悬停状态
+    
+    // UI组件
+    QLabel* m_nameLabel = nullptr;        ///< 名称标签
+    QLabel* m_descriptionLabel = nullptr; ///< 描述标签
+    QLabel* m_backgroundLabel = nullptr;  ///< 背景图片标签
+    
+    // 动画相关
+    QMovie* m_movie = nullptr;                ///< GIF动画对象
+    QPropertyAnimation* m_scaleAnimation = nullptr; ///< 缩放动画对象
+    
+    // 静态图片和GIF路径
+    QString m_imagePath; ///< 静态图片路径
+    QString m_gifPath;   ///< GIF动画路径
+};
+
+--- 文件结束: src\Ui\Components\WorkflowCard.h ---
+
+--- 文件开始: src\Ui\Components\WorkflowSelector.cpp ---
+
+/**
+ * @file WorkflowSelector.cpp
+ * @brief 工作流选择器组件实现文件
+ * 
+ * 该文件实现了WorkflowSelector类，用于显示工作流选择弹出窗口。
+ * 包含工作流卡片的布局管理、窗口样式设置、事件处理等功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#include "WorkflowSelector.h"
+#include "WorkflowCard.h"
+#include <QVBoxLayout>
+#include <QScrollArea>
+#include <QPainter>
+#include <QApplication>
+#include <QScreen>
+#include <QLabel>
+#include <QMouseEvent>
+
+/**
+ * @brief 构造函数
+ * @param parent 父窗口指针
+ * 
+ * 初始化工作流选择器窗口，设置窗口属性并创建UI界面。
+ * 预置了四种工作流类型：文生图、图生图、局部重绘、图像放大。
+ */
+WorkflowSelector::WorkflowSelector(QWidget* parent) : QWidget(parent) {
+    // 设置窗口属性：Popup 类型(无标题栏)，透明背景
+    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
+    setAttribute(Qt::WA_TranslucentBackground);
+    
+    // 初始化测试工作流数据
+    m_workflows.append(WorkflowInfo(1, "文生图", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "基础生成模式，从文字创建图像", WorkflowType::TextToImage));
+    m_workflows.append(WorkflowInfo(2, "图生图", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "基于参考图生成新图像", WorkflowType::ImageToImage));
+    m_workflows.append(WorkflowInfo(3, "局部重绘", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "对图像局部区域进行重绘", WorkflowType::Inpaint));
+    m_workflows.append(WorkflowInfo(4, "图像放大", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "提升图像分辨率和细节", WorkflowType::Upscale));
+    
+    setupUi();
+}
+
+/**
+ * @brief 析构函数
+ * 
+ * Qt会自动清理子控件，无需手动删除。
+ */
+WorkflowSelector::~WorkflowSelector() {
+    // Qt会自动清理子控件，无需手动删除
+}
+
+/**
+ * @brief 初始化UI界面
+ * 
+ * 创建工作流选择器的所有UI组件，包括：
+ * - 主布局和容器
+ * - 标题标签
+ * - 滚动区域和卡片布局
+ * - 工作流卡片
+ */
+void WorkflowSelector::setupUi() {
+    // 主布局：留出阴影的边距 (Margin = 3)
+    m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout->setContentsMargins(3, 3, 3, 3);
+    
+    // 实体容器 (深色底色的框)
+    m_container = new QWidget(this);
+    m_container->setObjectName("Container");
+    m_container->setStyleSheet(
+        "QWidget#Container {"
+        "  background-color: #2a2a2a;" // 深灰背景
+        "  border: 1px solid #444;"
+        "  border-radius: 12px;"       // 圆角
+        "}"
+    );
+    
+    // 给容器加阴影
+    QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(25);
+    shadow->setColor(QColor(0, 0, 0, 100));
+    shadow->setOffset(0, 8);
+    m_container->setGraphicsEffect(shadow);
+    
+    // 容器内部布局
+    m_containerLayout = new QVBoxLayout(m_container);
+    m_containerLayout->setContentsMargins(20, 20, 20, 20);
+    m_containerLayout->setSpacing(15);
+    
+    // 标题
+    QLabel* title = new QLabel("选择工作流", m_container);
+    title->setStyleSheet("color: white; font-size: 18px; font-weight: bold; border: none; background: transparent;");
+    m_containerLayout->addWidget(title);
+    
+    // 滚动区域
+    m_scrollArea = new QScrollArea(m_container);
+    m_scrollArea->setStyleSheet(
+        "QScrollArea { background: #343541; border: none; }"
+        "QScrollBar:vertical { border: none; background: #343541; width: 10px; margin: 0px; }"
+        "QScrollBar::handle:vertical { background: #565869; min-height: 20px; border-radius: 5px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+    );
+    m_scrollArea->setWidgetResizable(true);
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    
+    // 卡片列表容器
+    m_scrollContent = new QWidget();
+    m_scrollContent->setStyleSheet("background: transparent;");
+    
+    // 垂直布局放卡片
+    m_cardsLayout = new QVBoxLayout(m_scrollContent);
+    m_cardsLayout->setContentsMargins(0, 0, 10, 0); // 右边留点空给滚动条
+    m_cardsLayout->setSpacing(15);
+    
+    // 添加卡片
+    createWorkflowCards();
+    
+    m_scrollArea->setWidget(m_scrollContent);
+    m_containerLayout->addWidget(m_scrollArea);
+    
+    m_mainLayout->addWidget(m_container);
+    
+    // 设置窗口大小：卡片宽320 + 内外边距
+    this->setFixedSize(380, 500);
+}
+
+/**
+ * @brief 创建工作流卡片
+ * 
+ * 根据工作流数据创建对应的卡片组件，并设置点击事件连接。
+ * 清除现有卡片后重新创建，确保数据同步。
+ */
+void WorkflowSelector::createWorkflowCards() {
+    // 清除现有卡片
+    QLayoutItem* item;
+    while ((item = m_cardsLayout->takeAt(0)) != nullptr) {
+        if (item->widget()) {
+            item->widget()->deleteLater();
+        }
+        delete item;
+    }
+    m_workflowCards.clear();
+    
+    // 创建新卡片
+    for (const auto& workflow : m_workflows) {
+        WorkflowCard* card = new WorkflowCard(workflow, m_scrollContent);
+        
+        connect(card, &WorkflowCard::clicked, this, [this](const WorkflowInfo& info) {
+            emit workflowSelected(info);
+            this->hide();
+        });
+        
+        m_workflowCards.append(card);
+        m_cardsLayout->addWidget(card, 0, Qt::AlignHCenter); // 居中添加
+    }
+    
+    // 添加底部弹簧，防止卡片紧贴底部
+    m_cardsLayout->addStretch();
+}
+
+/**
+ * @brief 设置工作流数据
+ * @param workflows 工作流信息向量
+ * 
+ * 更新工作流数据并重新创建卡片，用于动态更新工作流列表。
+ */
+void WorkflowSelector::setWorkflows(const QVector<WorkflowInfo>& workflows) {
+    m_workflows = workflows;
+    createWorkflowCards();
+}
+
+/**
+ * @brief 绘制事件处理
+ * @param event 绘制事件
+ * 
+ * 使用透明模式绘制窗口背景，确保窗口完全透明。
+ * 这是实现无边框透明窗口的关键方法。
+ */
+void WorkflowSelector::paintEvent(QPaintEvent* event) {
+    Q_UNUSED(event);
+    QPainter p(this);
+    // 用 "Clear" 模式把整个窗口刷成完全透明
+    // 这样操作系统就不会绘制黑色底色了
+    p.setCompositionMode(QPainter::CompositionMode_Clear);
+    p.fillRect(rect(), Qt::transparent);
+}
+
+/**
+ * @brief 事件处理
+ * @param event 事件对象
+ * @return 是否处理了该事件
+ * 
+ * 处理窗口失去焦点事件，当用户点击窗口外部时自动关闭窗口。
+ */
+bool WorkflowSelector::event(QEvent* event) {
+    // 如果窗口失去焦点（用户点了别处），就隐藏
+    if (event->type() == QEvent::WindowDeactivate) {
+        this->hide();
+        return true;
+    }
+    return QWidget::event(event);
+}
+
+/**
+ * @brief 弹出窗口
+ * @param pos 弹出位置（相对于屏幕坐标）
+ * 
+ * 在指定位置弹出工作流选择窗口，自动调整位置确保不超出屏幕边界。
+ * 如果上方空间不足，会自动显示在下方。
+ */
+void WorkflowSelector::popup(const QPoint& pos) {
+    // 计算窗口位置，确保不超出屏幕边界
+    int x = pos.x() - width() / 2;
+    int y = pos.y() - height() - 10;
+    
+    // 获取屏幕尺寸
+    QScreen* screen = QApplication::primaryScreen();
+    QRect screenGeometry = screen->geometry();
+    
+    // 防止窗口超出屏幕边界
+    if (x < 10) x = 10;
+    if (x + width() > screenGeometry.width() - 10) x = screenGeometry.width() - width() - 10;
+    
+    if (y < 10) {
+        // 如果上方空间不足，显示在下方
+        y = pos.y() + 20;
+    }
+    if (y + height() > screenGeometry.height() - 10) {
+        y = screenGeometry.height() - height() - 10;
+    }
+    
+    move(x, y);
+    show();
+    raise();
+    setFocus();
+}
+
+
+--- 文件结束: src\Ui\Components\WorkflowSelector.cpp ---
+
+--- 文件开始: src\Ui\Components\WorkflowSelector.h ---
+
+/**
+ * @file WorkflowSelector.h
+ * @brief 工作流选择器组件头文件
+ * 
+ * 该文件定义了WorkflowSelector类，用于显示工作流选择弹出窗口。
+ * 包含工作流卡片的布局管理、窗口样式设置、事件处理等声明。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
+#pragma once
+#include <QWidget>
+#include <QVBoxLayout>
+#include <QScrollArea>
+#include <QLabel>
+#include <QGraphicsDropShadowEffect>
+#include "../../Model/WorkflowTypes.h"
+
+class WorkflowCard;
+
+/**
+ * @brief 工作流选择器类
+ * 
+ * 继承自QWidget，提供工作流选择功能的弹出窗口。
+ * 支持显示多个工作流卡片，具有透明背景、阴影效果和自动关闭功能。
+ */
+class WorkflowSelector : public QWidget {
+    Q_OBJECT
+
+public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
+    explicit WorkflowSelector(QWidget* parent = nullptr);
+    
+    /**
+     * @brief 析构函数
+     */
+    ~WorkflowSelector();
+    
+    /**
+     * @brief 弹出窗口
+     * @param pos 弹出位置（相对于屏幕坐标）
+     */
+    void popup(const QPoint& pos);
+    
+    /**
+     * @brief 设置工作流数据
+     * @param workflows 工作流信息向量
+     */
+    void setWorkflows(const QVector<WorkflowInfo>& workflows);
+    
+    /**
+     * @brief 获取当前工作流列表
+     * @return 工作流信息向量引用
+     */
+    const QVector<WorkflowInfo>& workflows() const { return m_workflows; }
+
+signals:
+    /**
+     * @brief 工作流选择信号
+     * @param info 选中的工作流信息
+     */
+    void workflowSelected(const WorkflowInfo& info);
+
+protected:
+    /**
+     * @brief 绘制事件处理
+     * @param event 绘制事件
+     */
+    void paintEvent(QPaintEvent* event) override;
+    
+    /**
+     * @brief 事件处理
+     * @param event 事件对象
+     * @return 是否处理了该事件
+     */
+    bool event(QEvent* event) override;
+
+private:
+    /**
+     * @brief 初始化UI界面
+     */
+    void setupUi();
+    
+    /**
+     * @brief 创建工作流卡片
+     */
+    void createWorkflowCards();
+
+private:
+    QVector<WorkflowInfo> m_workflows; ///< 工作流数据列表
+    QVector<WorkflowCard*> m_workflowCards; ///< 工作流卡片指针列表
+    
+    // UI组件
+    QVBoxLayout* m_mainLayout = nullptr; ///< 主布局
+    QWidget* m_container = nullptr; ///< 内容容器
+    QVBoxLayout* m_containerLayout = nullptr; ///< 容器布局
+    QScrollArea* m_scrollArea = nullptr; ///< 滚动区域
+    QWidget* m_scrollContent = nullptr; ///< 滚动内容
+    QVBoxLayout* m_cardsLayout = nullptr; ///< 卡片布局
+};
+
+--- 文件结束: src\Ui\Components\WorkflowSelector.h ---
+

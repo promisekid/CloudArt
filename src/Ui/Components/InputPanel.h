@@ -85,8 +85,8 @@ private slots:
      */
     void onGenerateClicked();
 
-    // 【新增】处理比例选择
-    void onRatioSelected(QAction* action);
+    // // 【新增】处理比例选择
+    // void onRatioSelected(QAction* action);
 
 private:
     void setupRatioMenu(); // 初始化菜单
@@ -103,5 +103,5 @@ private:
     QLineEdit* m_inputEdit;
     QPushButton* m_btnGenerate;
 
-    QToolButton* m_btnInterrogate; // 【新增】
+    // QToolButton* m_btnInterrogate; // 【新增】
 };

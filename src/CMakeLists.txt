@@ -10,6 +10,11 @@ set(SOURCES
 
     # Model
     Model/WorkflowTypes.h
+    Model/DataModels.h
+
+    # Database
+    Database/DatabaseManager.h
+    Database/DatabaseManager.cpp
 
     # Network
     Network/ComfyApiService.h
@@ -45,6 +50,7 @@ target_link_libraries(CloudArt PRIVATE
     Qt6::Widgets
     Qt6::Network
     Qt6::WebSockets
+    Qt6::Sql
 )
 
 # 设置 Windows 子系统 (避免运行时弹出黑色 cmd 窗口，但在开发调试期可以先注释掉下面这行)

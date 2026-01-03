@@ -31,9 +31,16 @@ ChatBubble::ChatBubble(ChatRole role, const QVariant& data, QWidget *parent)
 void ChatBubble::setupUi(const QVariant& data)
 {
     if (m_role == ChatRole::User) {
-        m_layout->addStretch();
-        initTextBubble(data.toString());
-    } else {
+        m_layout->addStretch(); // 弹簧在左，内容在右
+
+        // 【修改】让 User 也能发图
+        if (data.canConvert<QPixmap>()) {
+            initImageBubble(data.value<QPixmap>());
+        } else {
+            initTextBubble(data.toString());
+        }
+    }
+    else {
         // AI 气泡逻辑
         if (data.canConvert<QPixmap>()) {
             initImageBubble(data.value<QPixmap>());
@@ -52,34 +59,31 @@ void ChatBubble::setupUi(const QVariant& data)
 
 void ChatBubble::initTextBubble(const QString& text)
 {
-    // 创建一个容器 Frame 用来画背景和圆角
     QFrame* frame = new QFrame(this);
 
-    // 只有用户的气泡有背景色
+    // 样式设置
     QString style = (m_role == ChatRole::User)
-                        ? "background-color: #444654; border-radius: 8px; color: #ECECF1; padding: 10px;"
-                        : "background-color: transparent; color: #ECECF1; padding: 10px;";
-
+                        ? "background-color: #444654; border-radius: 8px; color: #ECECF1; padding: 10px;" // 用户样式
+                        : "background-color: #2A2B32; border-radius: 8px; color: #ECECF1; padding: 10px; border: 1px solid #444;";
     frame->setStyleSheet(style);
 
-    // 内部放 Label 显示文字
     QHBoxLayout* frameLayout = new QHBoxLayout(frame);
     frameLayout->setContentsMargins(0, 0, 0, 0);
 
-    QLabel* lblText = new QLabel(text, frame);
-    lblText->setWordWrap(true); // 关键：自动换行
-    lblText->setStyleSheet("border: none; background: transparent;");
-    lblText->setTextInteractionFlags(Qt::TextSelectableByMouse); // 允许复制文字
+    // 【核心修复】：这里不要定义局部变量 QLabel* lblText，直接用成员变量 m_contentLabel
+    // 之前写错的代码是：QLabel* lblText = new QLabel(text, frame);
+    m_contentLabel = new QLabel(text, frame);
 
-    // 限制最大宽度，防止气泡太宽读起来累
-    lblText->setMaximumWidth(600);
+    m_contentLabel->setWordWrap(true);
+    m_contentLabel->setStyleSheet("border: none; background: transparent;");
+    m_contentLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_contentLabel->setMaximumWidth(600);
 
-    // 如果不设置这个，右键 Label 只会弹出系统默认的菜单（或者没反应）
-    lblText->setContextMenuPolicy(Qt::CustomContextMenu);
+    // 右键菜单策略
+    m_contentLabel->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // 4. 连接信号
-    // 当用户在 Label 上右键时，会触发 customContextMenuRequested 信号
-    connect(lblText, &QLabel::customContextMenuRequested, this, [=](const QPoint& pos){
+    // 连接信号 (把 lblText 改为 m_contentLabel)
+    connect(m_contentLabel, &QLabel::customContextMenuRequested, this, [=](const QPoint& pos){
         QMenu menu;
         menu.setStyleSheet(
             "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
@@ -87,28 +91,25 @@ void ChatBubble::initTextBubble(const QString& text)
             "QMenu::item:selected { background-color: #40414F; }"
             );
 
-        // 添加“复制全文”动作
         QAction* actCopyAll = menu.addAction("📋 复制全部内容");
         connect(actCopyAll, &QAction::triggered, [=](){
             QClipboard *clipboard = QApplication::clipboard();
-            clipboard->setText(text); // 复制完整的原始文本
+            // 这里要用 m_contentLabel->text() 获取最新文本
+            clipboard->setText(m_contentLabel->text());
         });
 
-        // 如果用户选中了部分文本，也可以添加“复制选中” (可选)
-        if (lblText->hasSelectedText()) {
+        if (m_contentLabel->hasSelectedText()) {
             QAction* actCopySelected = menu.addAction("✂️ 复制选中内容");
             connect(actCopySelected, &QAction::triggered, [=](){
                 QClipboard *clipboard = QApplication::clipboard();
-                clipboard->setText(lblText->selectedText());
+                clipboard->setText(m_contentLabel->selectedText());
             });
         }
 
-        // 在鼠标位置弹出菜单
-        // mapToGlobal(pos) 把 Label 内部坐标转为屏幕坐标
-        menu.exec(lblText->mapToGlobal(pos));
+        menu.exec(m_contentLabel->mapToGlobal(pos));
     });
 
-    frameLayout->addWidget(lblText);
+    frameLayout->addWidget(m_contentLabel);
     m_layout->addWidget(frame);
 }
 
@@ -244,4 +245,24 @@ bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+
+void ChatBubble::appendText(const QString& text)
+{
+    // 如果还没初始化，先初始化
+    if (!m_contentLabel) {
+        initTextBubble("");
+    }
+
+    // 【优化】处理一下 Loading 态的残留 (如果之前是转圈图片)
+    if (m_loadingMovie && m_loadingMovie->state() == QMovie::Running) {
+        setLoading(false);
+        // 如果是从图片切回来的，可能需要重新布局，最简单的是 initTextBubble
+        // 但这里我们假设流式气泡一开始就是 TextBubble
+    }
+
+    // 追加文本
+    QString current = m_contentLabel->text();
+    m_contentLabel->setText(current + text);
 }

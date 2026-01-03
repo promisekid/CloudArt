@@ -19,6 +19,7 @@
 #include "Components/ChatBubble.h"
 #include "../Network/ComfyApiService.h"  // 新增
 #include "../Core/WorkflowManager.h"
+#include "../Model/DataModels.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -32,6 +33,10 @@
 #include <QDebug>
 #include <QRandomGenerator> // 用于生成随机种子
 #include <QStandardPaths>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QDir>
+#include <QDateTime>
 
 /**
  * @brief 构造函数
@@ -228,6 +233,9 @@ void MainWindow::setupUi()
     connect(m_wfSelector, &WorkflowSelector::workflowSelected,
             this, &MainWindow::onWorkflowSelected);
 
+    connect(m_inputPanel->getInterrogateBtn(), &QToolButton::clicked,
+            this, &MainWindow::onInterrogateClicked);
+
 
 
     // ---------------------------------------------------------
@@ -308,6 +316,16 @@ void MainWindow::setupUi()
     // void imageReceived(const QString& promptId, const QString& filename, const QPixmap& img);
     connect(m_apiService, &ComfyApiService::imageReceived, this,
             [this](const QString& promptId, const QString& filename, const QPixmap& img){
+
+                // 1. 【新增】保存图片到本地存储
+                QString localPath = saveImageToLocal(img);
+
+                // 2. 【新增】存入数据库 (AI Role)
+                int currentSid = m_chatArea->currentSessionId();
+                if (currentSid != -1 && !localPath.isEmpty()) {
+                    MessageData msg(currentSid, MessageRole::AI, "", localPath); // 文本为空，路径有值
+                    DatabaseManager::instance().addMessage(msg);
+                }
 
                 // 检查这个 ID 是否在我们的等待列表中
                 if (m_pendingBubbles.contains(promptId)) {
@@ -401,11 +419,147 @@ void MainWindow::setupUi()
             if (m_apiService) {
                 m_apiService->queuePrompt(wf);
             }
+
             return;
         }
 
+        // --- 分支 B: 【新增】视觉反推 ---
+        if (m_isUploadingForInterrogate) {
+            qDebug() << "反推图片上传成功，正在构建任务...";
+            m_isUploadingForInterrogate = false; // 复位标记
+            m_currentServerRefImg = serverName;  // 记下来供后续使用
+
+            // 1. 准备参数
+            QMap<QString, QVariant> params;
+            params["image_path"] = serverName; // 填入刚才上传的文件名
+
+            // 2. 调用管理器构建 JSON
+            QJsonObject wf = m_wfManager->buildWorkflow(WorkflowType::VisionCaption, params);
+
+            // 3. 发送任务
+            if (wf.isEmpty()) {
+                qDebug() << "❌ 反推工作流构建失败";
+                setJobRunning(false); // 记得解锁
+                return;
+            }
+
+            if (m_apiService) {
+                m_apiService->queuePrompt(wf);
+            }
+
+            // 反推不需要 m_tempBubbleForId，因为它是流式输出，我们会动态创建气泡
+            return;
+        }
+
+        // --- 分支 C: 【新增】图生图生成接力 ---
+        if (m_isUploadingForI2I) {
+            qDebug() << "图生图素材上传完毕:" << serverName;
+            m_isUploadingForI2I = false; // 复位标记
+
+            // 1. 取出之前暂存的参数 (提示词、种子)
+            QMap<QString, QVariant> params = m_pendingI2IParams;
+
+            // 2. 填入最关键的参数：服务器上的文件名
+            params["image_path"] = serverName;
+
+            // 3. 构建工作流 JSON
+            QJsonObject wf = m_wfManager->buildWorkflow(WorkflowType::ImageToImage, params);
+
+            // 4. 发送任务
+            if (wf.isEmpty()) {
+                qDebug() << "❌ 图生图工作流构建失败";
+                setJobRunning(false);
+                return;
+            }
+
+            if (m_apiService) {
+                m_apiService->queuePrompt(wf);
+            }
+
+            // 注意：此时 m_tempBubbleForId 依然指向我们在 onGenerateClicked 里创建的那个气泡
+            // 等一会儿 promptQueued 信号回来，就会自动把它和任务 ID 绑定上
+            return;
+        }
+
+
+
         // (未来这里还可以加 else if 处理图生图的上传逻辑)
     });
+
+    // 【新增】监听流式文本 (反推提示词)
+    // =========================================================
+    connect(m_apiService, &ComfyApiService::streamTokenReceived, this,
+            [this](const QString& token, bool finished){
+
+                // 1. 【新增】累加文本 (只累加有效内容)
+                if (!token.isEmpty()) {
+                    m_accumulatedStreamText += token;
+                }
+
+                // 2. UI 显示 (原有逻辑)
+                if (m_chatArea) {
+                    m_chatArea->handleStreamToken(token, finished);
+                }
+
+                // 3. 结束处理
+                if (finished) {
+                    qDebug() << "✅ 反推结束，完整文本长度:" << m_accumulatedStreamText.length();
+
+                    // 【新增】存入数据库 (AI Role)
+                    int currentSid = m_chatArea->currentSessionId();
+
+                    // 只有当有内容且有会话时才存
+                    if (currentSid != -1 && !m_accumulatedStreamText.isEmpty()) {
+                        MessageData msg(currentSid, MessageRole::AI, m_accumulatedStreamText);
+                        DatabaseManager::instance().addMessage(msg);
+                        qDebug() << "💾 反推文本已保存到数据库";
+                    }
+
+                    // 【新增】清空缓存，为下次做准备 (可选，双重保险)
+                    m_accumulatedStreamText.clear();
+
+                    setJobRunning(false);
+                }
+            });
+
+    // 左侧列表请求新建会话
+    connect(m_sessionList, &SessionList::createNewSessionRequest,
+            this, &MainWindow::createNewSession); // 【修改】连到新写的函数
+
+    // 2. 【修复】处理重命名
+    connect(m_sessionList, &SessionList::sessionRenameRequest, this,
+            [this](int id, const QString& newName){
+
+                // 更新数据库
+                DatabaseManager::instance().renameSession(id, newName);
+                qDebug() << "会话" << id << "重命名为" << newName;
+            });
+
+    // 3. 【修复】处理删除
+    connect(m_sessionList, &SessionList::sessionDeleteRequest, this,
+            [this](int id){
+
+                // 更新数据库 (级联删除消息)
+                DatabaseManager::instance().deleteSession(id);
+
+                // 如果删除的是当前正在看的会话，清空右侧并重置 ID
+                if (m_chatArea->currentSessionId() == id) {
+                    m_chatArea->clear();
+                    m_chatArea->setCurrentSessionId(-1);
+                }
+                qDebug() << "会话" << id << "已删除";
+            });
+
+    // 左侧列表请求切换会话 (之前可能没实现具体逻辑，现在要补上)
+    connect(m_sessionList, &SessionList::sessionSwitchRequest, this, [this](int id){
+        loadSessionHistory(id);
+    });
+
+    // ...
+
+    // 【最后一步】启动时加载数据
+    // 放在 setupUi 的最后，或者 show() 之前
+    loadSessionList();
 }
 
 /**
@@ -471,44 +625,78 @@ void MainWindow::onWorkflowSelected(const WorkflowInfo& info)
  */
 void MainWindow::onGenerateClicked(const QString& prompt)
 {
-    // 【新增】检查锁
+    // 1. 检查锁
     if (m_isJobRunning) return;
 
     qDebug() << "生成请求 - 提示词:" << prompt;
 
-    // 【新增】上锁
-    setJobRunning(true);
+    // 【新增】存入数据库 -> UI显示
+    // 只有当前有选中的会话才存 (currentSessionId != -1)
+    // 如果没有选中会话（比如刚启动），应该先 createNewSession()，这里假设已有
+    int currentSid = m_chatArea->currentSessionId();
+    if (currentSid != -1) {
+        // A. 存库
+        MessageData msg(currentSid, MessageRole::User, prompt);
+        DatabaseManager::instance().addMessage(msg);
 
-    qDebug() << "生成请求 - 提示词:" << prompt;
-
-    // 1. 界面显示用户气泡
-    if (m_chatArea) {
+        // B. 上屏
         m_chatArea->addUserMessage(prompt);
     }
 
-    // 2. 立即在界面上添加一个“转圈圈”的 AI 气泡 (左侧占位)
-    // 这个函数会返回新创建的气泡指针，我们需要拿住它
+    // 3. 立即添加“转圈圈”气泡，并暂存指针
+    // (这个气泡会一直转，直到文生图的任务ID回来，或者图生图的上传+任务ID回来)
     ChatBubble* loadingBubble = m_chatArea->addLoadingBubble();
-
-    // 【关键】把它暂存起来，因为下一行 send 还是异步的，ID 还没回来
     m_tempBubbleForId = loadingBubble;
 
-    // 2. 准备参数包 (Map)
-    QMap<QString, QVariant> params;
+    // 4. 上锁
+    setJobRunning(true);
 
-    // 参数 A: 提示词
+    // 5. 准备基础参数 (通用部分)
+    QMap<QString, QVariant> params;
     params["prompt"] = prompt;
 
-    // 参数 B: 随机种子 (ComfyUI 需要一个大整数)
     qint64 seed = QRandomGenerator::global()->generate();
-    if (seed < 0) seed = -seed; // 转正数
+    if (seed < 0) seed = -seed;
     params["seed"] = seed;
 
-    // [参数] 分辨率 (从 InputPanel 获取)
-    // 只有文生图模式才需要这个，但传进去也无妨，WorkflowManager 内部会判断
+    qDebug() << "准备生成, 类型:" << (int)m_currentWorkflowType << " 种子:" << seed;
+
+    // =================================================
+    // 分支 A: 图生图 (ImageToImage) -> 需要先上传
+    // =================================================
+    if (m_currentWorkflowType == WorkflowType::ImageToImage) {
+        // 获取本地参考图路径
+        QString localPath = m_refPopup->currentPath();
+
+        if (localPath.isEmpty()) {
+            qDebug() << "❌ 图生图模式必须先选择参考图";
+            // 失败处理：解锁，并把刚才生成的转圈气泡删掉(或者显示错误)
+            setJobRunning(false);
+            // 这里简单处理，你可以加个 delete loadingBubble;
+            return;
+        }
+
+        // 标记状态：这次上传是为了 I2I
+        m_isUploadingForI2I = true;
+
+        // 暂存参数 (等上传完了，再把 filename 塞进去)
+        m_pendingI2IParams = params;
+
+        // 开始上传 (上传成功后会触发 imageUploaded 信号，逻辑在那边继续)
+        if (m_apiService) {
+            m_apiService->uploadImage(localPath);
+        }
+
+        // 【重要】直接返回，不要往下走了，等待异步回调
+        return;
+    }
+
+    // =================================================
+    // 分支 B: 文生图 (TextToImage) -> 直接发送
+    // =================================================
     if (m_currentWorkflowType == WorkflowType::TextToImage) {
+        // 获取分辨率设置
         QSize size = m_inputPanel->currentResolution();
-        // 如果 InputPanel 还没设置过，给个默认值 1024x1024
         if (size.isEmpty()) size = QSize(1024, 1024);
 
         params["width"] = size.width();
@@ -517,23 +705,13 @@ void MainWindow::onGenerateClicked(const QString& prompt)
         qDebug() << "设定分辨率:" << size.width() << "x" << size.height();
     }
 
-    // [参数] 参考图 (如果是图生图模式)
-    if (m_currentWorkflowType == WorkflowType::ImageToImage) {
-        // 这里需要你之前实现的上传逻辑返回的服务器路径
-        // 假设你把路径存到了 m_uploadedRefImagePath 变量里
-        // params["image_path"] = m_uploadedRefImagePath;
-    }
-
-
-    qDebug() << "正在构建工作流, 类型:" << (int)m_currentWorkflowType << " 种子:" << seed;
-
-    // 3. 调用管理器构建 JSON
+    // 6. 构建工作流 JSON
     QJsonObject workflow = m_wfManager->buildWorkflow(m_currentWorkflowType, params);
 
-    // 4. 检查并发送
+    // 7. 发送给 ComfyUI
     if (workflow.isEmpty()) {
         qDebug() << "❌ 工作流构建失败";
-        setJobRunning(false); // 【新增】解锁
+        setJobRunning(false); // 解锁
         return;
     }
 
@@ -541,6 +719,7 @@ void MainWindow::onGenerateClicked(const QString& prompt)
         m_apiService->queuePrompt(workflow);
     } else {
         qDebug() << "❌ ApiService 未初始化";
+        setJobRunning(false);
     }
 }
 
@@ -702,12 +881,167 @@ void MainWindow::setJobRunning(bool running)
 {
     m_isJobRunning = running;
 
-    // 1. 生成按钮变态
-    QPushButton* btnGen = m_inputPanel->getGenerateBtn();
-    btnGen->setEnabled(!running);
-    btnGen->setText(running ? "生成中..." : "生成");
+    // 1. 【关键】锁定底部面板的所有操作 (包括比例、工作流、输入框等)
+    if (m_inputPanel) {
+        m_inputPanel->setLocked(running);
+        // 虽然按钮被禁用了，但改个文字提示一下用户当前状态还是友好的
+        m_inputPanel->getGenerateBtn()->setText(running ? "生成中..." : "生成");
+    }
 
-    // 2. 输入框禁用（防止生成过程中改词）
-    m_inputPanel->getInputEdit()->setEnabled(!running);
+    // 2. 锁定左侧会话列表 (禁止切换、删除)
+    if (m_sessionList) {
+        m_sessionList->setEnabled(!running);
+    }
 
+    // 3. 【新增】锁定左上角的切换按钮和历史按钮
+    // 防止用户在生成时把侧边栏收起来，或者跳到历史记录页
+    if (m_toggleSessionListBtn) m_toggleSessionListBtn->setEnabled(!running);
+    if (m_historyBtn) m_historyBtn->setEnabled(!running);
+
+}
+
+
+void MainWindow::onInterrogateClicked()
+{
+    // 1. 检查忙碌锁
+    if (m_isJobRunning) return;
+
+    // 2. 【修改】不再打开文件对话框，而是从参考图面板获取路径
+    QString localPath = m_refPopup->currentPath();
+
+    // 3. 校验：如果没有选参考图
+    if (localPath.isEmpty()) {
+        // 自动弹出参考图面板，引导用户
+        QToolButton* btn = m_inputPanel->getRefBtn();
+        if (btn) {
+            QPoint btnPos = btn->mapToGlobal(QPoint(btn->width() / 2, 0));
+            m_refPopup->popup(btnPos);
+            // 这里可以加一个 ToolTip 或者简单的 Message 提示用户
+            // btn->showToolTip("请先在这里上传图片");
+        }
+        return;
+    }
+
+    // 【新增】开始新任务前，务必清空文本缓存
+    m_accumulatedStreamText.clear();
+
+    // 4. 界面反馈：在聊天区显示这张图
+    // 获取 ReferencePopup 里的缓存图片 (QPixmap) 直接显示，不用重新加载文件
+    QPixmap pix = m_refPopup->currentImage();
+    if (!pix.isNull()) {
+        if (m_chatArea) m_chatArea->addUserImage(pix); // 还是暂时借用这个接口
+    }
+
+    // 5. 上锁并标记状态
+    setJobRunning(true);
+    m_isUploadingForInterrogate = true; // 标记：这是为了反推
+
+    // 6. 开始上传本地文件
+    if (m_apiService) {
+        m_apiService->uploadImage(localPath);
+    }
+}
+
+void MainWindow::loadSessionList()
+{
+    // 1. 从数据库查数据
+    QVector<SessionData> sessions = DatabaseManager::instance().getAllSessions();
+
+    // 2. 刷新 UI
+    m_sessionList->loadSessions(sessions);
+
+    // 3. 如果有历史会话，默认选中第一个 (最新的)
+    // 也可以不做，留空
+}
+
+void MainWindow::createNewSession()
+{
+    // 1. 数据库插入
+    int newId = DatabaseManager::instance().createSession("新会话");
+
+    if (newId != -1) {
+        // 2. 刷新左侧列表 (把新会话显示出来)
+        // 这一步很重要，否则左侧列表里没有这个新会话
+        loadSessionList();
+
+        // 3. 加载这个新会话
+        // loadSessionHistory 内部已经做了 clear() 和 setCurrentSessionId(newId)
+        // 并且因为是新会话，数据库没消息，它加载出来就是空的
+        loadSessionHistory(newId);
+
+        // 4. 确保左侧栏可见
+        if (!m_leftContainerVisible) onToggleLeftContainer();
+    }
+}
+
+QString MainWindow::saveImageToLocal(const QPixmap& img)
+{
+    // 1. 确定保存目录
+    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QString outputDir = dataDir + "/outputs";
+
+    QDir dir(outputDir);
+    if (!dir.exists()) dir.mkpath(".");
+
+    // 2. 生成唯一文件名 (时间戳.png)
+    QString fileName = QString::number(QDateTime::currentMSecsSinceEpoch()) + ".png";
+    QString fullPath = outputDir + "/" + fileName;
+
+    // 3. 保存
+    if (img.save(fullPath, "PNG")) {
+        return fullPath;
+    }
+    return QString();
+}
+
+
+void MainWindow::loadSessionHistory(int sessionId)
+{
+    qDebug() << "正在加载会话历史:" << sessionId;
+
+    // 1. 清空当前界面
+    m_chatArea->clear();
+    m_chatArea->setCurrentSessionId(sessionId);
+
+    // 2. 从数据库查数据
+    QVector<MessageData> messages = DatabaseManager::instance().getMessages(sessionId);
+
+    // 3. 遍历并恢复显示
+    for (const auto& msg : messages) {
+
+        // 判断角色
+        // 注意：数据库存的是字符串 "user"/"ai"，MessageData里转成了枚举
+        // 我们的 ChatBubble 用的是 ChatRole，可能需要对应一下
+        ChatRole role = (msg.role == MessageRole::User) ? ChatRole::User : ChatRole::AI;
+
+        if (msg.isImage()) {
+            // --- 图片消息 ---
+            // msg.imagePath 是本地绝对路径
+            QPixmap pix(msg.imagePath);
+            if (!pix.isNull()) {
+                if (role == ChatRole::User) {
+                    // 如果你之前写了 addUserImage 就用那个
+                    m_chatArea->addUserImage(pix);
+                } else {
+                    m_chatArea->addAiImage(pix);
+                }
+            } else {
+                // 图片文件丢失的情况
+                if (role == ChatRole::User) m_chatArea->addUserMessage("[图片文件已丢失]");
+                else m_chatArea->addAiMessage("[图片文件已丢失]");
+            }
+        }
+        else {
+            // --- 文字消息 ---
+            if (role == ChatRole::User) {
+                m_chatArea->addUserMessage(msg.text);
+            } else {
+                // AI 的文字 (反推结果)
+                m_chatArea->addAiMessage(msg.text);
+            }
+        }
+    }
+
+    // 4. 滚到底部 (给点延时让布局算好)
+    QTimer::singleShot(100, this, [this](){ m_chatArea->scrollToBottom(); });
 }

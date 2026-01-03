@@ -10,18 +10,6 @@ SessionList::SessionList(QWidget *parent)
     , m_currentSessionItem(nullptr)
 {
     setupUi();
-
-    // 测试数据：多加几个，看看滚动效果
-    addSession(1001, "😺 赛博朋克猫咪");
-    addSession(1002, "🌄 富士山风景生成");
-    addSession(1003, "🎨 Logo 设计草图");
-    addSession(1004, "🤖 代码助手测试");
-    addSession(1005, "📝 待办事项列表");
-    addSession(1006, "🌍 3D 地球模型");
-    addSession(1007, "🎵 Lo-Fi 音乐生成");
-    addSession(1008, "🎮 游戏资产概念图");
-    addSession(1009, "📈 财报分析助手");
-    addSession(1010, "🐍 Python 脚本优化");
 }
 
 void SessionList::setupUi()
@@ -127,6 +115,9 @@ void SessionList::addSession(int id, const QString& title)
     // 插入 UI
     // ---------------------------------------------------------
 
+    // 【新增】加入管理列表
+    m_items.append(item);
+
     // 【注意】插入到 m_scrollLayout，且在弹簧之前
     m_scrollLayout->insertWidget(m_scrollLayout->count() - 1, item);
 
@@ -142,4 +133,25 @@ void SessionList::handleItemSelection(SessionItem* clickedItem)
     if (m_currentSessionItem) m_currentSessionItem->setSelected(false);
     if (clickedItem) clickedItem->setSelected(true);
     m_currentSessionItem = clickedItem;
+}
+
+
+void SessionList::clear()
+{
+    m_currentSessionItem = nullptr;
+
+    for (auto* item : m_items) {
+        m_scrollLayout->removeWidget(item);
+        delete item;
+    }
+    m_items.clear();
+}
+
+void SessionList::loadSessions(const QVector<SessionData>& sessions)
+{
+    clear(); // 先清空旧的
+
+    for (const auto& s : sessions) {
+        addSession(s.id, s.name);
+    }
 }

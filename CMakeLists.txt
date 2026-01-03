@@ -13,7 +13,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # 查找 Qt6 组件 (核心组件、界面组件、网络组件)
-find_package(Qt6 COMPONENTS Widgets Network WebSockets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Network WebSockets Sql REQUIRED)
 
 # 添加子目录 (将构建逻辑下放到 src 文件夹)
 add_subdirectory(src)

@@ -18,6 +18,7 @@
 #include <QStackedWidget>
 #include "../Model/WorkflowTypes.h"
 #include "../Network/ComfyApiService.h"
+#include "../Database/DatabaseManager.h"
 
 
 // --- 前向声明 (Forward Declarations) ---
@@ -92,6 +93,9 @@ private slots:
      */
     void switchToHistoryWindow();
 
+    // 【新增】处理反推按钮点击
+    void onInterrogateClicked();
+
 protected:
     /**
      * @brief 窗口大小改变事件处理函数
@@ -114,6 +118,14 @@ private:
      * @brief 更新历史记录按钮位置
      */
     void updateHistoryButtonPosition();
+
+    // 【新增】加载所有历史会话
+    void loadSessionList();
+
+    // 【新增】创建新会话的逻辑
+    void createNewSession();
+
+    QString saveImageToLocal(const QPixmap& img);
 
     // --- 成员变量 (持有各个组件的指针) ---
     // 左侧
@@ -170,4 +182,24 @@ private:
 
     // 【新增】切换忙碌状态的辅助函数
     void setJobRunning(bool running);
+
+    // 【新增】标记：当前上传是否是为了反推提示词？
+    bool m_isUploadingForInterrogate = false;
+
+    // 【新增】记住反推用的图片名（给后续图生图备用，可选）
+    QString m_currentServerRefImg;
+
+    // 【新增】标记：当前上传是否为了图生图生成
+    bool m_isUploadingForI2I = false;
+
+    // 【新增】暂存图生图需要的参数 (提示词、种子)，等上传完了一起用
+    QMap<QString, QVariant> m_pendingI2IParams;
+
+    // 【新增】用于暂存流式传输的完整文本
+    QString m_accumulatedStreamText;
+
+    // 【新增】加载指定会话的历史记录到聊天区
+    void loadSessionHistory(int sessionId);
+
+
 };

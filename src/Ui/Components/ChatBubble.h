@@ -54,6 +54,9 @@ public:
     // 【新增】获取服务器文件名（给高清修复用）
     QString serverFileName() const { return m_serverFileName; }
 
+    // 【新增】往气泡里追加文字
+    void appendText(const QString& text);
+
 signals:
     // 【新增】右键菜单触发的信号
     void upscaleRequested(const QString& fileName, const QPixmap& img);

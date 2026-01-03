@@ -142,46 +142,49 @@ void ComfyApiService::onPostFinished()
 
 void ComfyApiService::onTextMessageReceived(const QString &message)
 {
-    // 【调试 1】打印收到的原始消息（看看有没有数据进来）
-    // 注意：如果消息太长刷屏，测试完记得注释掉
-    // qDebug() << "收到WS消息:" << message;
-
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
     QJsonObject root = doc.object();
-
     QString msgType = root["type"].toString();
     QJsonObject data = root["data"].toObject();
 
-    // 过滤掉进度消息，只看关键事件
-    if (msgType != "progress") {
-        qDebug() << "👉 消息类型:" << msgType;
+    // 1. 处理流式消息
+    if (msgType == "cloudart_stream") {
+        QString token = data["token"].toString();
+        bool finished = data["finished"].toBool();
+        emit streamTokenReceived(token, finished);
+        return;
     }
 
+    // 2. 处理节点执行完成
     if (msgType == "executed") {
-        QString nodeId = data["node"].toString();
+        // 【强制转换】把 node 转成字符串，防止 JSON 数字/字符串类型不匹配
+        QString nodeId = QString::number(data["node"].toInt());
+        // 如果转数字失败（说明本身是字符串），再直接转字符串
+        if (nodeId == "0") nodeId = data["node"].toString();
+
         QString promptId = data["prompt_id"].toString();
 
-        // 【调试 2】打印每次执行完的节点ID
-        qDebug() << "✅ 节点执行完成 -> ID:" << nodeId
-                 << " 当前任务ID:" << promptId
-                 << " 预期任务ID:" << m_currentPromptId;
+        // 【强力调试】打印这一行，看看到底收到了什么
+        qDebug() << "🔍 检查结束条件 | 收到ID:" << nodeId << " | 目标ID: 4 | 任务匹配:" << (promptId == m_currentPromptId);
 
-        // 核心判断逻辑
+        // 逻辑 A: 文生图/高清修复 (SaveImage)
         if (promptId == m_currentPromptId && (nodeId == "20" || nodeId == "1" || nodeId == "9")) {
-            qDebug() << "🎯 捕捉到目标 SaveImage 节点！准备下载...";
-
+            // ... (保持原有的图片下载逻辑) ...
             QJsonObject output = data["output"].toObject();
             QJsonArray images = output["images"].toArray();
-
             if (!images.isEmpty()) {
                 QJsonObject imgInfo = images[0].toObject();
-                QString filename = imgInfo["filename"].toString();
-                QString subfolder = imgInfo["subfolder"].toString();
-                QString type = imgInfo["type"].toString();
-
-                // 发起 HTTP 请求下载图片
-                getImage(filename, subfolder, type, promptId);
+                getImage(imgInfo["filename"].toString(),
+                         imgInfo["subfolder"].toString(),
+                         imgInfo["type"].toString(), promptId);
             }
+        }
+
+        // 逻辑 B: 视觉反推 (PreviewAny)
+        // 【修改】放宽条件，只要是当前任务且 ID 是 4，或者它是唯一的输出节点
+        if (promptId == m_currentPromptId && nodeId == "4") {
+            qDebug() << "🛑 触发反推强制解锁";
+            emit streamTokenReceived("", true);
         }
     }
 }

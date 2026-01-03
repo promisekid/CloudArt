@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QDebug>
+#include <QRandomGenerator>
 
 WorkflowManager::WorkflowManager(QObject *parent) : QObject(parent)
 {
@@ -23,6 +24,9 @@ QJsonObject WorkflowManager::buildWorkflow(WorkflowType type, const QMap<QString
 
     case WorkflowType::ImageToImage:
         return buildImageToImage(params); // 预留
+
+    case WorkflowType::VisionCaption:
+        return buildVisionCaption(params);
 
     default:
         qDebug() << "❌ 未知的工作流类型:" << (int)type;
@@ -72,13 +76,6 @@ QJsonObject WorkflowManager::buildUpscale(const QMap<QString, QVariant>& params)
     return workflow;
 }
 
-QJsonObject WorkflowManager::buildImageToImage(const QMap<QString, QVariant>& params)
-{
-    // 这里预留给图生图逻辑
-    // 逻辑类似：loadTemplate(":/workflows/render") -> setNodeInput...
-    Q_UNUSED(params);
-    return QJsonObject();
-}
 
 // ---------------------------------------------------------
 // 工具函数实现
@@ -132,4 +129,59 @@ QJsonObject WorkflowManager::loadTemplate(const QString& resourcePath)
     }
 
     return doc.object();
+}
+
+
+QJsonObject WorkflowManager::buildVisionCaption(const QMap<QString, QVariant>& params)
+{
+    // 加载模板 (确保 resources.qrc 里别名是 vision)
+    QJsonObject workflow = loadTemplate(":/workflows/vision");
+
+    if (workflow.isEmpty()) {
+        qDebug() << "❌ 无法加载反推模板 :/workflows/vision";
+        return QJsonObject();
+    }
+
+    // 填入图片路径
+    // 对应 JSON 中的 Node 3 (LoadImage) -> inputs -> image
+    if (params.contains("image_path")) {
+        setNodeInput(workflow, "3", "image", params["image_path"].toString());
+    }
+
+    qint64 seed = QRandomGenerator::global()->generate();
+    if (seed < 0) seed = -seed;
+
+    // 如果 params 里传了种子就用传的，没传就随机生成
+    if (params.contains("seed")) {
+        seed = params["seed"].toLongLong();
+    }
+
+    setNodeInput(workflow, "1", "seed", seed);
+
+    return workflow;
+}
+
+
+QJsonObject WorkflowManager::buildImageToImage(const QMap<QString, QVariant>& params)
+{
+    // 别名 render 对应 i2i_render.json
+    QJsonObject workflow = loadTemplate(":/workflows/render");
+    if (workflow.isEmpty()) return QJsonObject();
+
+    // 1. 填入参考图 (Node 30)
+    if (params.contains("image_path")) {
+        setNodeInput(workflow, "30", "image", params["image_path"].toString());
+    }
+
+    // 2. 填入提示词 (Node 6)
+    if (params.contains("prompt")) {
+        setNodeInput(workflow, "6", "text", params["prompt"].toString());
+    }
+
+    // 3. 填入种子 (Node 3)
+    if (params.contains("seed")) {
+        setNodeInput(workflow, "3", "seed", params["seed"].toLongLong());
+    }
+
+    return workflow;
 }

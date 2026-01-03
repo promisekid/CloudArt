@@ -6,16 +6,6 @@
 ChatArea::ChatArea(QWidget *parent) : QWidget(parent)
 {
     setupUi();
-
-    // 测试数据：你可以解开注释看看效果
-    addUserMessage("帮我生成一张丰川祥子的图片。");
-    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png")); // 记得换成存在的图片路径测试
-    addUserMessage("帮我生成一张丰川祥子的图片的撒范德萨发大水发射点范德萨范德萨发生爱上发大水范德萨发大水。");
-    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png"));
-    addUserMessage("帮我生成一张丰川祥子的图片。");
-    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/祥子/426DAA5942BF4BCE235CD3004582BC3A.png"));
-    addUserMessage("帮我生成一张美丽女孩的横板图片。");
-    addAiImage(QPixmap("C:/Users/24462/Pictures/comfyui/模特/ComfyUI_temp_yqjmp_00006_.png"));
 }
 
 void ChatArea::setupUi()
@@ -101,25 +91,75 @@ void ChatArea::scrollToBottom()
 
 void ChatArea::clear()
 {
-    // 遍历布局中的所有项目
-    QLayoutItem *item;
-    // 我们要保留第一个 item (那是 addStretch 加的弹簧)
-    // 如果你的弹簧是最后加的，逻辑就不一样。
-    // 在之前的代码中，我在构造函数里加了 m_contentLayout->addStretch();
-    // 它是布局里的第 0 个元素。
+    // 【核心修复】
+    // 这里的逻辑是：只要布局里的元素多于 1 个（那个 1 就是最后的弹簧），就一直删。
+    // 必须从 index 0 (第一个) 开始删，这样永远删的是最上面的气泡。
+    // 最后的弹簧会一直留在那里，直到它变成 index 0。
 
-    // 从最后往前删，直到只剩 1 个（即弹簧）
     while (m_contentLayout->count() > 1) {
-        item = m_contentLayout->takeAt(m_contentLayout->count() - 1); // 取出最后一个
+        // 取出第一个元素 (气泡)
+        QLayoutItem *item = m_contentLayout->takeAt(0);
+
         if (item->widget()) {
-            delete item->widget(); // 删除气泡控件
+            delete item->widget(); // 销毁气泡控件
         }
-        delete item; // 删除布局项本身
+        delete item; // 销毁布局项
     }
 
     // 重置状态
     m_currentSessionId = -1;
+    m_currentStreamBubble = nullptr; // 别忘了重置这个
 
-    // 强制刷新一下 UI
     this->update();
+}
+
+
+void ChatArea::handleStreamToken(const QString& token, bool finished)
+{
+    // 【关键修复 1】如果是单纯的结束信号（没有内容），且当前没有活跃气泡，直接忽略
+    // 这能防止“强制解锁信号”创建一个空气泡
+    if (finished && token.isEmpty() && !m_currentStreamBubble) {
+        return;
+    }
+
+    // 【关键修复 2】过滤中间的空包
+    if (token.isEmpty() && !finished) {
+        return;
+    }
+
+    // 2. 如果没有正在打字的气泡，造一个新的
+    if (!m_currentStreamBubble) {
+        // 如果能走到这里，说明 token 肯定不为空
+        m_currentStreamBubble = new ChatBubble(ChatRole::AI, token, m_scrollContent);
+        m_contentLayout->insertWidget(m_contentLayout->count() - 1, m_currentStreamBubble);
+    }
+    else {
+        // 3. 追加
+        if (!token.isEmpty()) {
+            m_currentStreamBubble->appendText(token);
+        }
+    }
+
+    // 4. 滚动
+    QTimer::singleShot(10, this, [this](){ scrollToBottom(); });
+
+    // 5. 结束重置
+    if (finished) {
+        m_currentStreamBubble = nullptr;
+    }
+}
+
+void ChatArea::addUserImage(const QPixmap& img)
+{
+    ChatBubble* bubble = new ChatBubble(ChatRole::User, img, m_scrollContent);
+    // User 的图通常不需要高清修复，所以不连 upscale 信号也可以
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
+    scrollToBottom();
+}
+
+void ChatArea::addAiMessage(const QString& text)
+{
+    ChatBubble* bubble = new ChatBubble(ChatRole::AI, text, m_scrollContent);
+    m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
+    scrollToBottom();
 }

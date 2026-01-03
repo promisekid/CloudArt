@@ -40,4 +40,7 @@ private:
 
     // 构建图生图 (预留)
     QJsonObject buildImageToImage(const QMap<QString, QVariant>& params);
+
+    // 【新增】构建视觉反推工作流
+    QJsonObject buildVisionCaption(const QMap<QString, QVariant>& params);
 };

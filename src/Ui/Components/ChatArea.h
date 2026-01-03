@@ -71,6 +71,14 @@ public:
      */
     void scrollToBottom();
 
+    // 【新增】处理流式文字
+    void handleStreamToken(const QString& token, bool finished);
+
+    void addUserImage(const QPixmap& img);
+
+    // 【新增】直接添加 AI 文本消息 (用于加载历史，无动画)
+    void addAiMessage(const QString& text);
+
 signals:
     // 【新增】转发气泡的高清修复请求给 MainWindow
     void upscaleRequested(const QString& filename, const QPixmap& img);
@@ -88,4 +96,7 @@ private:
     QWidget* m_scrollContent; ///< 滚动内容组件
     QVBoxLayout* m_contentLayout; ///< 内容布局
     int m_currentSessionId = -1; ///< 当前会话ID，-1表示无选中会话
+    // 【新增】记录当前正在“打字”的气泡指针
+    ChatBubble* m_currentStreamBubble = nullptr;
+
 };

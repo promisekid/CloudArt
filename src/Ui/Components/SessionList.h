@@ -16,6 +16,7 @@
 #include <QVBoxLayout>
 #include <QList>
 #include <QScrollArea>
+#include "../../Model/DataModels.h" // 【新增】引入数据模型
 
 class SessionItem;
 class QPushButton;
@@ -43,6 +44,13 @@ public:
      */
     void addSession(int id, const QString& title);
 
+    // 【新增】清空列表
+    void clear();
+
+    // 【新增】加载会话列表数据
+    void loadSessions(const QVector<SessionData>& sessions);
+
+
 signals:
     /**
      * @brief 会话切换请求信号
@@ -68,6 +76,7 @@ signals:
      */
     void createNewSessionRequest();
 
+
 private:
     /**
      * @brief 初始化UI布局
@@ -86,4 +95,6 @@ private:
     QPushButton* m_btnNew; ///< 新建会话按钮
 
     SessionItem* m_currentSessionItem = nullptr; ///< 当前选中的会话项指针
+
+    QList<SessionItem*> m_items; // 【新增】管理所有 Item 指针
 };

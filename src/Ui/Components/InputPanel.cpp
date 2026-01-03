@@ -25,6 +25,21 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
         );
     layout->addWidget(m_btnRef);
 
+    // =================================================
+    // 【新增】反推按钮 (魔法棒)
+    // =================================================
+    m_btnInterrogate = new QToolButton(this);
+    m_btnInterrogate->setText("🪄"); // 魔法棒图标
+    m_btnInterrogate->setFixedSize(40, 40);
+    m_btnInterrogate->setToolTip("上传图片反推提示词");
+    m_btnInterrogate->setStyleSheet(
+        "QToolButton { background-color: transparent; border: 1px solid #555; border-radius: 20px; color: white; font-size: 20px; }"
+        "QToolButton:hover { background-color: #444; }"
+        );
+    layout->addWidget(m_btnInterrogate);
+    // =================================================
+
+
     // =========================================================
     // 【新增】2. 画幅比例按钮
     // =========================================================
@@ -151,4 +166,22 @@ void InputPanel::updateState(WorkflowType type) {
 
 QSize InputPanel::currentResolution() const {
     return m_currentResolution;
+}
+
+
+void InputPanel::setLocked(bool locked)
+{
+    bool enabled = !locked;
+
+    // 1. 禁用所有功能按钮
+    m_btnRef->setEnabled(enabled);          // 参考图
+    m_btnInterrogate->setEnabled(enabled);  // 反推
+    m_btnRatio->setEnabled(enabled);        // 比例
+    m_btnWorkflow->setEnabled(enabled);     // 工作流
+
+    // 2. 禁用输入框
+    m_inputEdit->setEnabled(enabled);
+
+    // 3. 禁用生成按钮
+    m_btnGenerate->setEnabled(enabled);
 }

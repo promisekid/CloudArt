@@ -66,7 +66,11 @@ public:
     // 【新增】获取当前选择的分辨率
     QSize currentResolution() const;
 
+    // 【新增】获取反推按钮
+    QToolButton* getInterrogateBtn() const { return m_btnInterrogate; }
 
+    // 【新增】锁定/解锁面板所有控件
+    void setLocked(bool locked);
 
 signals:
     /**
@@ -102,4 +106,5 @@ private:
     QLineEdit* m_inputEdit;
     QPushButton* m_btnGenerate;
 
+    QToolButton* m_btnInterrogate; // 【新增】
 };

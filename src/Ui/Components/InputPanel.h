@@ -66,8 +66,7 @@ public:
     // 【新增】获取当前选择的分辨率
     QSize currentResolution() const;
 
-    // 【新增】获取反推按钮
-    QToolButton* getInterrogateBtn() const { return m_btnInterrogate; }
+
 
 signals:
     /**
@@ -85,8 +84,8 @@ private slots:
      */
     void onGenerateClicked();
 
-    // // 【新增】处理比例选择
-    // void onRatioSelected(QAction* action);
+    // 【新增】处理比例选择
+    void onRatioSelected(QAction* action);
 
 private:
     void setupRatioMenu(); // 初始化菜单
@@ -103,5 +102,4 @@ private:
     QLineEdit* m_inputEdit;
     QPushButton* m_btnGenerate;
 
-    // QToolButton* m_btnInterrogate; // 【新增】
 };

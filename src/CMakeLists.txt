@@ -61,4 +61,4 @@ target_link_libraries(CloudArt PRIVATE
 )
 
 # 设置 Windows 子系统 (避免运行时弹出黑色 cmd 窗口，但在开发调试期可以先注释掉下面这行)
-# set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)
+set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)

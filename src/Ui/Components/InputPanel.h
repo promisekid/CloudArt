@@ -13,7 +13,7 @@
 #pragma once
 #include <QWidget>
 #include <QPushButton>
-#include <QToolButton> // 使用 ToolButton 做纯图标按钮更合适
+#include <QToolButton>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPlainTextEdit>
@@ -25,8 +25,10 @@
  * 继承自QWidget，提供工作流选择、参考图上传和文本输入功能。
  * 包含按钮组件、输入框和状态管理功能。
  */
-class InputPanel : public QWidget {
+class InputPanel : public QWidget
+{
     Q_OBJECT
+
 public:
     /**
      * @brief 构造函数
@@ -39,7 +41,7 @@ public:
      * @return QPushButton* 工作流按钮指针
      */
     QPushButton* getWorkflowBtn() const { return m_btnWorkflow; }
-    
+
     /**
      * @brief 获取参考图按钮
      * @return QToolButton* 参考图按钮指针
@@ -54,7 +56,7 @@ public:
 
     /**
      * @brief 获取输入框
-     * @return QLineEdit* 输入框指针
+     * @return QPlainTextEdit* 输入框指针
      */
     QPlainTextEdit* getInputEdit() const { return m_inputEdit; }
 
@@ -64,16 +66,30 @@ public:
      */
     void updateState(WorkflowType type);
 
-    // 【新增】获取当前选择的分辨率
+    /**
+     * @brief 获取当前选择的分辨率
+     * @return QSize 当前分辨率
+     */
     QSize currentResolution() const;
 
-    // 【新增】获取反推按钮
+    /**
+     * @brief 获取反推按钮
+     * @return QToolButton* 反推按钮指针
+     */
     QToolButton* getInterrogateBtn() const { return m_btnInterrogate; }
 
-    // 【新增】锁定/解锁面板所有控件
+    /**
+     * @brief 锁定/解锁面板所有控件
+     * @param locked 是否锁定
+     */
     void setLocked(bool locked);
 
-    // 【新增】设置连接状态 (专门用于网络断开时的锁定)
+    /**
+     * @brief 设置连接状态
+     * @param isConnected 是否已连接
+     * 
+     * 专门用于网络断开时的锁定
+     */
     void setConnectionStatus(bool isConnected);
 
 signals:
@@ -83,11 +99,20 @@ signals:
      */
     void generateClicked(const QString& prompt);
 
-    // 【新增】比例改变信号（可选，如果MainWindow需要立即知道）
+    /**
+     * @brief 分辨率改变信号
+     * @param w 宽度
+     * @param h 高度
+     */
     void resolutionChanged(int w, int h);
 
 protected:
-    // 【新增】重写事件过滤器，处理回车键
+    /**
+     * @brief 重写事件过滤器，处理回车键
+     * @param obj 被监视的对象
+     * @param e 事件对象
+     * @return bool 是否处理了该事件
+     */
     bool eventFilter(QObject *obj, QEvent *e) override;
 
 private slots:
@@ -96,26 +121,30 @@ private slots:
      */
     void onGenerateClicked();
 
-    // 【新增】处理比例选择
+    /**
+     * @brief 处理比例选择
+     * @param action 被选中的动作
+     */
     void onRatioSelected(QAction* action);
 
-    // 【新增】文本变化时调整高度
+    /**
+     * @brief 文本变化时调整高度
+     */
     void adjustInputHeight();
 
 private:
-    void setupRatioMenu(); // 初始化菜单
+    /**
+     * @brief 初始化菜单
+     */
+    void setupRatioMenu();
 
 private:
-    QPushButton* m_btnWorkflow;
-    QToolButton* m_btnRef;
-
-    // 【新增】比例按钮
-    QToolButton* m_btnRatio;
-    QMenu* m_ratioMenu;
-    QSize m_currentResolution; // 当前选中的分辨率
-
-    QPlainTextEdit* m_inputEdit;
-    QPushButton* m_btnGenerate;
-
-    QToolButton* m_btnInterrogate; // 【新增】
+    QPushButton* m_btnWorkflow = nullptr; ///< 工作流按钮
+    QToolButton* m_btnRef = nullptr; ///< 参考图按钮
+    QToolButton* m_btnRatio = nullptr; ///< 比例按钮
+    QMenu* m_ratioMenu = nullptr; ///< 比例菜单
+    QSize m_currentResolution = QSize(1024, 1024); ///< 当前选中的分辨率
+    QPlainTextEdit* m_inputEdit = nullptr; ///< 输入框
+    QPushButton* m_btnGenerate = nullptr; ///< 生成按钮
+    QToolButton* m_btnInterrogate = nullptr; ///< 反推按钮
 };

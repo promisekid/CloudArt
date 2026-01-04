@@ -58,10 +58,19 @@ public:
      */
     void queuePrompt(const QJsonObject& workflow);
 
-    // 【新增】获取图片数据的接口 (通过 HTTP GET)
+    /**
+     * @brief 获取图片数据
+     * @param filename 图片文件名
+     * @param subfolder 子文件夹路径
+     * @param type 图片类型
+     * @param promptId 提示词ID
+     */
     void getImage(const QString& filename, const QString& subfolder, const QString& type, const QString& promptId);
 
-    // 【新增】上传图片函数
+    /**
+     * @brief 上传图片到服务器
+     * @param localPath 本地图片路径
+     */
     void uploadImage(const QString& localPath);
 
 signals:
@@ -90,30 +99,48 @@ signals:
 
     void promptQueued(const QString& promptId);
 
-    // 【新增】图片下载完成信号
+    /**
+     * @brief 图片下载完成信号
+     * @param promptId 提示词ID
+     * @param filename 文件名
+     * @param img 图片数据
+     */
     void imageReceived(const QString& promptId, const QString& filename, const QPixmap& img);
 
-    // 【新增】上传成功信号
+    /**
+     * @brief 图片上传成功信号
+     * @param serverFileName 服务器文件名
+     */
     void imageUploaded(const QString& serverFileName);
 
-    // 【新增】流式文字信号(如果之前没加)
+    /**
+     * @brief 流式文字接收信号
+     * @param token 接收到的文本
+     * @param finished 是否完成
+     */
     void streamTokenReceived(const QString& token, bool finished);
 
 private slots:
-    // 【新增】处理 HTTP 回复
+    /**
+     * @brief 处理HTTP POST请求完成
+     */
     void onPostFinished();
 
-    // 【新增】处理 WebSocket 文本消息
+    /**
+     * @brief 处理WebSocket文本消息
+     * @param message 接收到的消息内容
+     */
     void onTextMessageReceived(const QString &message);
 
-    // 【新增】处理图片下载完成
+    /**
+     * @brief 处理图片下载完成
+     */
     void onImageDownloadFinished();
 
 private:
     QNetworkAccessManager* m_networkManager; ///< HTTP网络管理器
     QWebSocket* m_webSocket; ///< WebSocket连接
-    QString m_apiBaseUrl;
-    // 【新增】记录当前的任务ID，用于匹配
-    QString m_currentPromptId;
-    QString m_clientId;
+    QString m_apiBaseUrl; ///< API基础URL
+    QString m_currentPromptId; ///< 当前任务ID，用于匹配
+    QString m_clientId; ///< 客户端ID
 };

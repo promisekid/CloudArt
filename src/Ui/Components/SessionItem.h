@@ -121,10 +121,10 @@ private:
     void showMenu();
 
 private:
-    int m_id; ///< 会话ID
-    QString m_fullTitle; ///< 完整标题
+    int m_id = -1; ///< 会话ID
+    QString m_fullTitle = ""; ///< 完整标题
     bool m_isSelected = false; ///< 是否选中状态
 
-    QLabel *m_lblTitle; ///< 标题标签
-    QToolButton *m_btnOption; ///< 选项按钮
+    QLabel* m_lblTitle = nullptr; ///< 标题标签
+    QToolButton* m_btnOption = nullptr; ///< 选项按钮
 };

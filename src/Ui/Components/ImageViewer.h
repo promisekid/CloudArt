@@ -66,9 +66,9 @@ private:
     void fitImageToWindow();
 
 private:
-    QGraphicsView* m_view;          ///< 图形视图窗口
-    QGraphicsScene* m_scene;        ///< 图形场景容器
-    QGraphicsPixmapItem* m_item;    ///< 图片图元对象
+    QGraphicsView* m_view = nullptr;          ///< 图形视图窗口
+    QGraphicsScene* m_scene = nullptr;        ///< 图形场景容器
+    QGraphicsPixmapItem* m_item = nullptr;    ///< 图片图元对象
 
     /**
      * @brief 自适应窗口模式标记

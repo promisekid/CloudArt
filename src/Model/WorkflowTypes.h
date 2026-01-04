@@ -28,7 +28,7 @@ enum class WorkflowType {
     PortraitEnhance = 6,  ///< 人像美化
     BackgroundRemove = 7, ///< 背景移除
     ColorCorrection = 8,   ///< 色彩校正
-    VisionCaption = 9 // 【新增】视觉反推
+    VisionCaption = 9      ///< 视觉反推
 };
 
 /**

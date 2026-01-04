@@ -63,7 +63,10 @@ public:
      */
     void addAiImage(const QPixmap& img);
 
-    // 【新增】添加一个加载态气泡，并返回指针
+    /**
+     * @brief 添加加载态气泡
+     * @return ChatBubble* 新创建的加载气泡指针
+     */
     ChatBubble* addLoadingBubble();
 
     /**
@@ -71,16 +74,31 @@ public:
      */
     void scrollToBottom();
 
-    // 【新增】处理流式文字
+    /**
+     * @brief 处理流式文字
+     * @param token 流式文本片段
+     * @param finished 是否完成
+     */
     void handleStreamToken(const QString& token, bool finished);
 
+    /**
+     * @brief 添加用户图片消息
+     * @param img 用户上传的图片
+     */
     void addUserImage(const QPixmap& img);
 
-    // 【新增】直接添加 AI 文本消息 (用于加载历史，无动画)
+    /**
+     * @brief 直接添加AI文本消息（用于加载历史，无动画）
+     * @param text AI回复的文本内容
+     */
     void addAiMessage(const QString& text);
 
 signals:
-    // 【新增】转发气泡的高清修复请求给 MainWindow
+    /**
+     * @brief 高清修复请求信号
+     * @param filename 服务器文件名
+     * @param img 图片数据
+     */
     void upscaleRequested(const QString& filename, const QPixmap& img);
 
 private:
@@ -92,11 +110,11 @@ private:
 
 
 private:
-    QScrollArea* m_scrollArea; ///< 滚动区域组件
-    QWidget* m_scrollContent; ///< 滚动内容组件
-    QVBoxLayout* m_contentLayout; ///< 内容布局
+    QScrollArea* m_scrollArea = nullptr; ///< 滚动区域组件
+    QWidget* m_scrollContent = nullptr; ///< 滚动内容组件
+    QVBoxLayout* m_contentLayout = nullptr; ///< 内容布局
     int m_currentSessionId = -1; ///< 当前会话ID，-1表示无选中会话
-    // 【新增】记录当前正在“打字”的气泡指针
+    // 【新增】记录当前正在"打字"的气泡指针
     ChatBubble* m_currentStreamBubble = nullptr;
 
 };

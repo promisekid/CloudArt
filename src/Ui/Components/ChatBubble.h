@@ -45,20 +45,37 @@ public:
      */
     explicit ChatBubble(ChatRole role, const QVariant& data, QWidget *parent = nullptr);
 
-    // 【新增】控制加载动画
+    /**
+     * @brief 控制加载动画
+     * @param loading 是否显示加载动画
+     */
     void setLoading(bool loading);
 
-    // 【新增】更新图片数据（生成完成后调用）
+    /**
+     * @brief 更新图片数据（生成完成后调用）
+     * @param img 生成的图片数据
+     * @param serverFileName 服务器文件名
+     */
     void updateImage(const QPixmap& img, const QString& serverFileName);
 
-    // 【新增】获取服务器文件名（给高清修复用）
+    /**
+     * @brief 获取服务器文件名（用于高清修复）
+     * @return QString 服务器文件名
+     */
     QString serverFileName() const { return m_serverFileName; }
 
-    // 【新增】往气泡里追加文字
+    /**
+     * @brief 往气泡里追加文字
+     * @param text 要追加的文本内容
+     */
     void appendText(const QString& text);
 
 signals:
-    // 【新增】右键菜单触发的信号
+    /**
+     * @brief 高清修复请求信号
+     * @param fileName 服务器文件名
+     * @param img 图片数据
+     */
     void upscaleRequested(const QString& fileName, const QPixmap& img);
 
 protected:
@@ -100,11 +117,11 @@ private:
     void showViewer();
 
 private:
-    ChatRole m_role; ///< 消息角色
-    QHBoxLayout* m_layout; ///< 水平布局
+    ChatRole m_role = ChatRole::User; ///< 消息角色
+    QHBoxLayout* m_layout = nullptr; ///< 水平布局
     QPixmap m_currentImage; ///< 当前图片数据
     // 【新增】成员变量
     QLabel* m_contentLabel = nullptr; // 统一管理显示内容的 Label
     QMovie* m_loadingMovie = nullptr; // 加载动画对象
-    QString m_serverFileName;         // 服务器上的原始文件名
+    QString m_serverFileName = "";         // 服务器上的原始文件名
 };

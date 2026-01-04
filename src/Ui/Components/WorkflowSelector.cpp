@@ -1,10 +1,6 @@
 /**
  * @file WorkflowSelector.cpp
  * @brief 工作流选择器组件实现文件
- * 
- * 该文件实现了WorkflowSelector类，用于显示工作流选择弹出窗口。
- * 包含工作流卡片的布局管理、窗口样式设置、事件处理等功能。
- * 
  * @author CloudArt Team
  * @version 1.0
  * @date 2024
@@ -50,47 +46,35 @@ WorkflowSelector::~WorkflowSelector() {
 
 /**
  * @brief 初始化UI界面
- * 
- * 创建工作流选择器的所有UI组件，包括：
- * - 主布局和容器
- * - 标题标签
- * - 滚动区域和卡片布局
- * - 工作流卡片
  */
 void WorkflowSelector::setupUi() {
-    // 主布局：留出阴影的边距 (Margin = 3)
     m_mainLayout = new QVBoxLayout(this);
     m_mainLayout->setContentsMargins(3, 3, 3, 3);
     
-    // 实体容器 (深色底色的框)
     m_container = new QWidget(this);
     m_container->setObjectName("Container");
     m_container->setStyleSheet(
         "QWidget#Container {"
-        "  background-color: #2a2a2a;" // 深灰背景
+        "  background-color: #2a2a2a;"
         "  border: 1px solid #444;"
-        "  border-radius: 12px;"       // 圆角
+        "  border-radius: 12px;"
         "}"
     );
     
-    // 给容器加阴影
     QGraphicsDropShadowEffect* shadow = new QGraphicsDropShadowEffect(this);
     shadow->setBlurRadius(25);
     shadow->setColor(QColor(0, 0, 0, 100));
     shadow->setOffset(0, 8);
     m_container->setGraphicsEffect(shadow);
     
-    // 容器内部布局
     m_containerLayout = new QVBoxLayout(m_container);
     m_containerLayout->setContentsMargins(20, 20, 20, 20);
     m_containerLayout->setSpacing(15);
     
-    // 标题
     QLabel* title = new QLabel("选择工作流", m_container);
     title->setStyleSheet("color: white; font-size: 18px; font-weight: bold; border: none; background: transparent;");
     m_containerLayout->addWidget(title);
     
-    // 滚动区域
     m_scrollArea = new QScrollArea(m_container);
     m_scrollArea->setStyleSheet(
         "QScrollArea { background: #343541; border: none; }"
@@ -102,16 +86,13 @@ void WorkflowSelector::setupUi() {
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     
-    // 卡片列表容器
     m_scrollContent = new QWidget();
     m_scrollContent->setStyleSheet("background: transparent;");
     
-    // 垂直布局放卡片
     m_cardsLayout = new QVBoxLayout(m_scrollContent);
-    m_cardsLayout->setContentsMargins(0, 0, 10, 0); // 右边留点空给滚动条
+    m_cardsLayout->setContentsMargins(0, 0, 10, 0);
     m_cardsLayout->setSpacing(15);
     
-    // 添加卡片
     createWorkflowCards();
     
     m_scrollArea->setWidget(m_scrollContent);
@@ -119,7 +100,6 @@ void WorkflowSelector::setupUi() {
     
     m_mainLayout->addWidget(m_container);
     
-    // 设置窗口大小：卡片宽320 + 内外边距
     this->setFixedSize(380, 500);
 }
 
@@ -203,25 +183,18 @@ bool WorkflowSelector::event(QEvent* event) {
 /**
  * @brief 弹出窗口
  * @param pos 弹出位置（相对于屏幕坐标）
- * 
- * 在指定位置弹出工作流选择窗口，自动调整位置确保不超出屏幕边界。
- * 如果上方空间不足，会自动显示在下方。
  */
 void WorkflowSelector::popup(const QPoint& pos) {
-    // 计算窗口位置，确保不超出屏幕边界
     int x = pos.x() - width() / 2;
     int y = pos.y() - height() - 10;
     
-    // 获取屏幕尺寸
     QScreen* screen = QApplication::primaryScreen();
     QRect screenGeometry = screen->geometry();
     
-    // 防止窗口超出屏幕边界
     if (x < 10) x = 10;
     if (x + width() > screenGeometry.width() - 10) x = screenGeometry.width() - width() - 10;
     
     if (y < 10) {
-        // 如果上方空间不足，显示在下方
         y = pos.y() + 20;
     }
     if (y + height() > screenGeometry.height() - 10) {

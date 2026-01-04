@@ -4,9 +4,11 @@
     ├── .gitignore
     ├── CMakeLists.txt
     ├── output.txt
+    ├── readme.md
     └── .qtcreator/
         ├── CMakeLists.txt.user
         └── qtc-cmake-presets-bvhIHIpF/
+        └── qtc-cmake-presets-UMKIggZP/
         └── qtc-cmake-presets-XZNvAZIY/
         └── qtc-cmake-presets-ZvFdVnmy/
     └── resources/
@@ -108,6 +110,32 @@ add_subdirectory(src)
 
 
 --- 文件结束: output.txt ---
+
+--- 文件开始: readme.md ---
+
+# CloudArt - AI图像生成桌面客户端
+
+基于Qt6的AI绘画工具，接入ComfyUI服务器，支持文生图、图生图、高清修复。
+
+## 功能
+- 会话持久化（SQLite）
+- 实时进度（WebSocket）
+- 参考图上传
+- 历史画廊
+- 精致深色UI + GIF动效
+
+## 演示
+![文生图](resources/images/文生图演示.gif)
+![图生图](resources/images/图生图演示.gif)
+
+## 技术栈
+Qt6 + C++17 + CMake + SQLite + WebSocket
+
+## 如何运行
+需要Qt6环境和ComfyUI服务器。# CloudArt
+
+
+--- 文件结束: readme.md ---
 
 --- 文件开始: resources\workflows\i2i_render.json ---
 
@@ -754,20 +782,33 @@ set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)
 
 --- 文件开始: src\main.cpp ---
 
+/**
+ * @file main.cpp
+ * @brief 应用程序主入口文件
+ * 
+ * 该文件包含应用程序的main函数，负责应用程序的初始化、数据库连接和主窗口显示。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include <QApplication>
 #include "Ui/MainWindow.h"
-// 引入数据库头文件
 #include "Database/DatabaseManager.h"
 
+/**
+ * @brief 应用程序主函数
+ * @param argc 命令行参数个数
+ * @param argv 命令行参数数组
+ * @return int 应用程序退出码
+ */
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     app.setApplicationName("CloudArt");
-
     app.setWindowIcon(QIcon(":/images/logo.png"));
 
-    // 【新增】启动时初始化数据库
-    // 如果失败了，直接打印错误（或者弹窗提示），但不一定要退出
     if (!DatabaseManager::instance().init()) {
         qDebug() << "⚠️ 警告：数据库初始化失败，历史记录将无法保存！";
     }
@@ -787,6 +828,18 @@ int main(int argc, char *argv[])
 
 --- 文件开始: src\Core\WorkflowManager.cpp ---
 
+/**
+ * @file WorkflowManager.cpp
+ * @brief 工作流管理器实现文件
+ * 
+ * 该文件实现了WorkflowManager类，负责构建和管理各种工作流的JSON数据。
+ * 支持文生图、图生图、高清修复、视觉反推等多种工作流类型。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "WorkflowManager.h"
 #include <QFile>
 #include <QJsonDocument>
@@ -795,11 +848,20 @@ int main(int argc, char *argv[])
 #include <QDebug>
 #include <QRandomGenerator>
 
+/**
+ * @brief 构造函数
+ * @param parent 父对象指针
+ */
 WorkflowManager::WorkflowManager(QObject *parent) : QObject(parent)
 {
 }
 
-
+/**
+ * @brief 构建工作流JSON
+ * @param type 工作流类型
+ * @param params 用户输入的参数
+ * @return QJsonObject 准备好发送给API的JSON对象
+ */
 QJsonObject WorkflowManager::buildWorkflow(WorkflowType type, const QMap<QString, QVariant>& params)
 {
     qDebug() << "WorkflowManager: 构建工作流类型 ->" << (int)type;
@@ -812,33 +874,35 @@ QJsonObject WorkflowManager::buildWorkflow(WorkflowType type, const QMap<QString
         return buildUpscale(params);
 
     case WorkflowType::ImageToImage:
-        return buildImageToImage(params); // 预留
+        return buildImageToImage(params);
 
     case WorkflowType::VisionCaption:
         return buildVisionCaption(params);
 
     default:
-        qDebug() << "❌ 未知的工作流类型:" << (int)type;
+        qDebug() << "未知的工作流类型:" << (int)type;
         return QJsonObject();
     }
 }
 
+/**
+ * @brief 构建文生图工作流
+ * @param params 用户输入参数
+ * @return QJsonObject 文生图工作流JSON对象
+ */
 QJsonObject WorkflowManager::buildTextToImage(const QMap<QString, QVariant>& params)
 {
     QJsonObject workflow = loadTemplate(":/workflows/t2i");
     if (workflow.isEmpty()) return QJsonObject();
 
-    // 1. 设置提示词 (Node 5: CLIPTextEncode)
     if (params.contains("prompt")) {
         setNodeInput(workflow, "5", "text", params["prompt"].toString());
     }
 
-    // 2. 设置种子 (Node 4: KSampler)
     if (params.contains("seed")) {
         setNodeInput(workflow, "4", "seed", params["seed"].toLongLong());
     }
 
-    // 3. 设置分辨率 (Node 7: EmptyLatentImage)
     if (params.contains("width") && params.contains("height")) {
         setNodeInput(workflow, "7", "width", params["width"].toInt());
         setNodeInput(workflow, "7", "height", params["height"].toInt());
@@ -847,17 +911,20 @@ QJsonObject WorkflowManager::buildTextToImage(const QMap<QString, QVariant>& par
     return workflow;
 }
 
+/**
+ * @brief 构建高清修复工作流
+ * @param params 用户输入参数
+ * @return QJsonObject 高清修复工作流JSON对象
+ */
 QJsonObject WorkflowManager::buildUpscale(const QMap<QString, QVariant>& params)
 {
     QJsonObject workflow = loadTemplate(":/workflows/upscale");
     if (workflow.isEmpty()) return QJsonObject();
 
-    // 1. 设置原图路径 (Node 6: LoadImage)
     if (params.contains("image_path")) {
         setNodeInput(workflow, "6", "image", params["image_path"].toString());
     }
 
-    // 2. 设置种子 (Node 2: SeedVR2)
     if (params.contains("seed")) {
         setNodeInput(workflow, "2", "seed", params["seed"].toLongLong());
     }
@@ -865,31 +932,29 @@ QJsonObject WorkflowManager::buildUpscale(const QMap<QString, QVariant>& params)
     return workflow;
 }
 
-
-// ---------------------------------------------------------
-// 工具函数实现
-// ---------------------------------------------------------
-
+/**
+ * @brief 设置指定节点的输入参数值
+ * @param workflow 工作流JSON对象（引用传递，直接修改）
+ * @param nodeId 节点ID
+ * @param inputKey 参数名
+ * @param value 参数值
+ */
 void WorkflowManager::setNodeInput(QJsonObject& workflow, const QString& nodeId, const QString& inputKey, const QVariant& value)
 {
-    // 检查节点是否存在
     if (!workflow.contains(nodeId)) {
-        qDebug() << "⚠️ Warning: JSON中找不到节点 ID:" << nodeId;
+        qDebug() << "Warning: JSON中找不到节点 ID:" << nodeId;
         return;
     }
 
-    // 剥洋葱：workflow -> node -> inputs -> value
     QJsonObject node = workflow[nodeId].toObject();
 
     if (!node.contains("inputs")) {
-        qDebug() << "⚠️ Warning: 节点" << nodeId << "没有 inputs 字段";
+        qDebug() << "Warning: 节点" << nodeId << "没有 inputs 字段";
         return;
     }
 
     QJsonObject inputs = node["inputs"].toObject();
 
-    // 根据值的类型进行转换
-    // 注意：JSON 数字对应 Qt 的 double/long long
     if (value.typeId() == QMetaType::LongLong || value.typeId() == QMetaType::Int) {
         inputs[inputKey] = value.toLongLong();
     }
@@ -897,42 +962,46 @@ void WorkflowManager::setNodeInput(QJsonObject& workflow, const QString& nodeId,
         inputs[inputKey] = value.toString();
     }
 
-    // 封包回去 (这是修改 QJsonObject 的必须步骤，因为它是隐式共享的)
     node["inputs"] = inputs;
     workflow[nodeId] = node;
 }
 
-
+/**
+ * @brief 加载资源文件中的JSON模板
+ * @param resourcePath 资源文件路径
+ * @return QJsonObject JSON模板对象
+ */
 QJsonObject WorkflowManager::loadTemplate(const QString& resourcePath)
 {
     QFile file(resourcePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "❌ 无法加载模板文件:" << resourcePath;
+        qDebug() << "无法加载模板文件:" << resourcePath;
         return QJsonObject();
     }
 
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
     if (doc.isNull()) {
-        qDebug() << "❌ JSON 格式错误:" << resourcePath;
+        qDebug() << "JSON 格式错误:" << resourcePath;
         return QJsonObject();
     }
 
     return doc.object();
 }
 
-
+/**
+ * @brief 构建视觉反推工作流
+ * @param params 用户输入参数
+ * @return QJsonObject 视觉反推工作流JSON对象
+ */
 QJsonObject WorkflowManager::buildVisionCaption(const QMap<QString, QVariant>& params)
 {
-    // 加载模板 (确保 resources.qrc 里别名是 vision)
     QJsonObject workflow = loadTemplate(":/workflows/vision");
 
     if (workflow.isEmpty()) {
-        qDebug() << "❌ 无法加载反推模板 :/workflows/vision";
+        qDebug() << "无法加载反推模板 :/workflows/vision";
         return QJsonObject();
     }
 
-    // 填入图片路径
-    // 对应 JSON 中的 Node 3 (LoadImage) -> inputs -> image
     if (params.contains("image_path")) {
         setNodeInput(workflow, "3", "image", params["image_path"].toString());
     }
@@ -940,7 +1009,6 @@ QJsonObject WorkflowManager::buildVisionCaption(const QMap<QString, QVariant>& p
     qint64 seed = QRandomGenerator::global()->generate();
     if (seed < 0) seed = -seed;
 
-    // 如果 params 里传了种子就用传的，没传就随机生成
     if (params.contains("seed")) {
         seed = params["seed"].toLongLong();
     }
@@ -950,24 +1018,24 @@ QJsonObject WorkflowManager::buildVisionCaption(const QMap<QString, QVariant>& p
     return workflow;
 }
 
-
+/**
+ * @brief 构建图生图工作流
+ * @param params 用户输入参数
+ * @return QJsonObject 图生图工作流JSON对象
+ */
 QJsonObject WorkflowManager::buildImageToImage(const QMap<QString, QVariant>& params)
 {
-    // 别名 render 对应 i2i_render.json
     QJsonObject workflow = loadTemplate(":/workflows/render");
     if (workflow.isEmpty()) return QJsonObject();
 
-    // 1. 填入参考图 (Node 30)
     if (params.contains("image_path")) {
         setNodeInput(workflow, "30", "image", params["image_path"].toString());
     }
 
-    // 2. 填入提示词 (Node 6)
     if (params.contains("prompt")) {
         setNodeInput(workflow, "6", "text", params["prompt"].toString());
     }
 
-    // 3. 填入种子 (Node 3)
     if (params.contains("seed")) {
         setNodeInput(workflow, "3", "seed", params["seed"].toLongLong());
     }
@@ -980,50 +1048,94 @@ QJsonObject WorkflowManager::buildImageToImage(const QMap<QString, QVariant>& pa
 
 --- 文件开始: src\Core\WorkflowManager.h ---
 
+/**
+ * @file WorkflowManager.h
+ * @brief 工作流管理器头文件
+ * 
+ * 该文件定义了WorkflowManager类，负责构建和管理各种工作流的JSON数据。
+ * 支持文生图、图生图、高清修复、视觉反推等多种工作流类型。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #pragma once
+
 #include <QObject>
 #include <QJsonObject>
 #include <QMap>
 #include <QVariant>
 #include "../Model/WorkflowTypes.h"
 
+/**
+ * @brief 工作流管理器类
+ * 
+ * 负责构建不同类型的工作流JSON对象，用于与ComfyUI API交互。
+ * 支持文生图、图生图、高清修复和视觉反推等多种工作流类型。
+ */
 class WorkflowManager : public QObject
 {
     Q_OBJECT
+
 public:
+    /**
+     * @brief 构造函数
+     * @param parent 父对象指针
+     */
     explicit WorkflowManager(QObject *parent = nullptr);
 
     /**
-     * @brief 构建工作流 JSON
+     * @brief 构建工作流JSON
      * @param type 工作流类型 (例如 TextToImage)
      * @param params 用户输入的参数 (例如 prompt, seed)
-     * @return 准备好发送给 API 的 JSON 对象
+     * @return QJsonObject 准备好发送给API的JSON对象
      */
     QJsonObject buildWorkflow(WorkflowType type, const QMap<QString, QVariant>& params);
 
 private:
-    // 加载资源文件中的 JSON
+    /**
+     * @brief 加载资源文件中的JSON模板
+     * @param resourcePath 资源文件路径
+     * @return QJsonObject JSON模板对象
+     */
     QJsonObject loadTemplate(const QString& resourcePath);
 
-    // 【新增】通用修改器：设置指定节点的输入参数值
-    // workflow: 引用传递，直接修改
-    // nodeId: 节点ID (如 "3")
-    // inputKey: 参数名 (如 "seed", "text")
-    // value: 参数值
+    /**
+     * @brief 设置指定节点的输入参数值
+     * @param workflow 工作流JSON对象（引用传递，直接修改）
+     * @param nodeId 节点ID (如 "3")
+     * @param inputKey 参数名 (如 "seed", "text")
+     * @param value 参数值
+     */
     void setNodeInput(QJsonObject& workflow, const QString& nodeId, const QString& inputKey, const QVariant& value);
 
-    // --- 具体工作流构建函数 ---
-
-    // 构建文生图
+    /**
+     * @brief 构建文生图工作流
+     * @param params 用户输入参数
+     * @return QJsonObject 文生图工作流JSON对象
+     */
     QJsonObject buildTextToImage(const QMap<QString, QVariant>& params);
 
-    // 构建高清修复
+    /**
+     * @brief 构建高清修复工作流
+     * @param params 用户输入参数
+     * @return QJsonObject 高清修复工作流JSON对象
+     */
     QJsonObject buildUpscale(const QMap<QString, QVariant>& params);
 
-    // 构建图生图 (预留)
+    /**
+     * @brief 构建图生图工作流
+     * @param params 用户输入参数
+     * @return QJsonObject 图生图工作流JSON对象
+     */
     QJsonObject buildImageToImage(const QMap<QString, QVariant>& params);
 
-    // 【新增】构建视觉反推工作流
+    /**
+     * @brief 构建视觉反推工作流
+     * @param params 用户输入参数
+     * @return QJsonObject 视觉反推工作流JSON对象
+     */
     QJsonObject buildVisionCaption(const QMap<QString, QVariant>& params);
 };
 
@@ -1031,6 +1143,18 @@ private:
 --- 文件结束: src\Core\WorkflowManager.h ---
 
 --- 文件开始: src\Database\DatabaseManager.cpp ---
+
+/**
+ * @file DatabaseManager.cpp
+ * @brief 数据库管理器实现文件
+ * 
+ * 该文件实现了DatabaseManager类，负责应用程序的数据库操作。
+ * 使用单例模式管理数据库连接，提供会话和消息的增删改查接口。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
 
 #include "DatabaseManager.h"
 #include <QSqlQuery>
@@ -1040,54 +1164,67 @@ private:
 #include <QDebug>
 #include <QVariant>
 
+/**
+ * @brief 获取单例实例
+ * @return DatabaseManager& 数据库管理器单例引用
+ */
 DatabaseManager& DatabaseManager::instance()
 {
     static DatabaseManager instance;
     return instance;
 }
 
+/**
+ * @brief 构造函数
+ * @param parent 父对象指针
+ */
 DatabaseManager::DatabaseManager(QObject *parent) : QObject(parent) {}
 
+/**
+ * @brief 析构函数
+ */
 DatabaseManager::~DatabaseManager()
 {
     if (m_db.isOpen()) m_db.close();
 }
 
+/**
+ * @brief 初始化数据库
+ * @return bool 初始化是否成功
+ * 
+ * 打开数据库连接并创建必要的数据表
+ */
 bool DatabaseManager::init()
 {
-    // 1. 确定数据库存放在哪里
-    // 也就是 C:/Users/用户名/AppData/Local/CloudArt/cloudart.db
     QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
-    // 确保文件夹存在
     QDir dir(dataDir);
     if (!dir.exists()) dir.mkpath(".");
 
     QString dbPath = dataDir + "/cloudart.db";
-    qDebug() << "📂 数据库路径:" << dbPath;
+    qDebug() << "数据库路径:" << dbPath;
 
-    // 2. 连接 SQLite
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(dbPath);
 
     if (!m_db.open()) {
-        qDebug() << "❌ 打开数据库失败:" << m_db.lastError().text();
+        qDebug() << "打开数据库失败:" << m_db.lastError().text();
         return false;
     }
 
-    // 3. 检查并创建表
     createTables();
     return true;
 }
 
+/**
+ * @brief 创建数据表
+ * 
+ * 创建会话表和消息表（如果不存在）
+ */
 void DatabaseManager::createTables()
 {
     QSqlQuery query;
 
-    // --- 表1：会话表 ---
-    // id: 自增主键
-    // title: 会话名
-    // created_at: 创建时间
     bool success = query.exec(
         "CREATE TABLE IF NOT EXISTS tb_sessions ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1095,14 +1232,8 @@ void DatabaseManager::createTables()
         "created_at INTEGER"
         ")"
         );
-    if (!success) qDebug() << "❌ tb_sessions 建表失败:" << query.lastError();
+    if (!success) qDebug() << "tb_sessions 建表失败:" << query.lastError();
 
-    // --- 表2：消息表 ---
-    // session_id: 属于哪个会话
-    // role: 'user' 或 'ai'
-    // content: 文字内容
-    // image_path: 图片路径
-    // timestamp: 时间
     success = query.exec(
         "CREATE TABLE IF NOT EXISTS tb_messages ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1113,31 +1244,40 @@ void DatabaseManager::createTables()
         "timestamp INTEGER"
         ")"
         );
-    if (!success) qDebug() << "❌ tb_messages 建表失败:" << query.lastError();
+    if (!success) qDebug() << "tb_messages 建表失败:" << query.lastError();
 }
 
+/**
+ * @brief 创建新会话
+ * @param name 会话名称
+ * @return int 新创建的会话ID，失败返回-1
+ */
 int DatabaseManager::createSession(const QString& name)
 {
     QSqlQuery query;
-    // 使用 prepare 预处理语句，:name 是占位符
     query.prepare("INSERT INTO tb_sessions (title, created_at) VALUES (:name, :time)");
 
     query.bindValue(":name", name);
     query.bindValue(":time", QDateTime::currentMSecsSinceEpoch());
 
     if (query.exec()) {
-        // 返回新插入行的自增 ID
         return query.lastInsertId().toInt();
     }
 
-    qDebug() << "❌ 创建会话失败:" << query.lastError();
+    qDebug() << "创建会话失败:" << query.lastError();
     return -1;
 }
 
+/**
+ * @brief 获取所有会话
+ * @return QVector<SessionData> 所有会话的数据列表
+ * 
+ * 用于初始化左侧会话列表
+ */
 QVector<SessionData> DatabaseManager::getAllSessions()
 {
     QVector<SessionData> list;
-    QSqlQuery query("SELECT * FROM tb_sessions ORDER BY created_at DESC"); // 按时间倒序，新的在上面
+    QSqlQuery query("SELECT * FROM tb_sessions ORDER BY created_at DESC");
 
     while (query.next()) {
         SessionData session;
@@ -1149,6 +1289,12 @@ QVector<SessionData> DatabaseManager::getAllSessions()
     return list;
 }
 
+/**
+ * @brief 重命名会话
+ * @param id 会话ID
+ * @param newName 新会话名称
+ * @return bool 重命名是否成功
+ */
 bool DatabaseManager::renameSession(int id, const QString& newName)
 {
     QSqlQuery query;
@@ -1158,25 +1304,31 @@ bool DatabaseManager::renameSession(int id, const QString& newName)
     return query.exec();
 }
 
+/**
+ * @brief 删除会话
+ * @param id 会话ID
+ * @return bool 删除是否成功
+ * 
+ * 删除会话时会连带删除该会话下的所有消息
+ */
 bool DatabaseManager::deleteSession(int id)
 {
-    // 1. 先删消息 (虽然 SQLite 可以设级联删除，但手动删更稳妥)
     QSqlQuery queryMsg;
     queryMsg.prepare("DELETE FROM tb_messages WHERE session_id = :sid");
     queryMsg.bindValue(":sid", id);
     queryMsg.exec();
 
-    // 2. 再删会话
     QSqlQuery query;
     query.prepare("DELETE FROM tb_sessions WHERE id = :id");
     query.bindValue(":id", id);
     return query.exec();
 }
 
-// =========================================================
-// 消息操作实现
-// =========================================================
-
+/**
+ * @brief 添加新消息
+ * @param msg 消息数据
+ * @return int 新消息的ID，失败返回-1
+ */
 int DatabaseManager::addMessage(const MessageData& msg)
 {
     QSqlQuery query;
@@ -1184,7 +1336,6 @@ int DatabaseManager::addMessage(const MessageData& msg)
                   "VALUES (:sid, :role, :content, :img, :time)");
 
     query.bindValue(":sid", msg.sessionId);
-    // 枚举转字符串存入
     query.bindValue(":role", msg.role == MessageRole::User ? "user" : "ai");
     query.bindValue(":content", msg.text);
     query.bindValue(":img", msg.imagePath);
@@ -1194,26 +1345,30 @@ int DatabaseManager::addMessage(const MessageData& msg)
         return query.lastInsertId().toInt();
     }
 
-    qDebug() << "❌ 插入消息失败:" << query.lastError();
+    qDebug() << "插入消息失败:" << query.lastError();
     return -1;
 }
 
+/**
+ * @brief 获取指定会话的所有消息
+ * @param sessionId 会话ID
+ * @return QVector<MessageData> 消息数据列表
+ * 
+ * 用于点击会话后加载历史消息
+ */
 QVector<MessageData> DatabaseManager::getMessages(int sessionId)
 {
     QVector<MessageData> list;
     QSqlQuery query;
-    // 按时间正序，早说的话在上面
     query.prepare("SELECT * FROM tb_messages WHERE session_id = :sid ORDER BY timestamp ASC");
     query.bindValue(":sid", sessionId);
 
     if (!query.exec()) {
-        qDebug() << "❌ 查询消息失败:" << query.lastError();
+        qDebug() << "查询消息失败:" << query.lastError();
         return list;
     }
 
     while (query.next()) {
-        // 使用构造函数方便一点，或者手动赋值
-        // int sid, MessageRole r, const QString& t, const QString& img
         int id = query.value("id").toInt();
         int sid = query.value("session_id").toInt();
         QString roleStr = query.value("role").toString();
@@ -1232,12 +1387,14 @@ QVector<MessageData> DatabaseManager::getMessages(int sessionId)
     return list;
 }
 
-
+/**
+ * @brief 获取所有生成的图片路径
+ * @return QVector<QString> 图片路径列表（按时间倒序）
+ */
 QVector<QString> DatabaseManager::getAllAiImages()
 {
     QVector<QString> list;
     QSqlQuery query;
-    // 查询所有 role 为 'ai' 且 image_path 不为空的记录，按时间倒序排列
     query.prepare("SELECT image_path FROM tb_messages WHERE role = 'ai' AND image_path != '' ORDER BY timestamp DESC");
 
     if (query.exec()) {
@@ -1245,7 +1402,7 @@ QVector<QString> DatabaseManager::getAllAiImages()
             list.append(query.value("image_path").toString());
         }
     } else {
-        qDebug() << "❌ 查询历史图片失败:" << query.lastError();
+        qDebug() << "查询历史图片失败:" << query.lastError();
     }
     return list;
 }
@@ -1255,60 +1412,135 @@ QVector<QString> DatabaseManager::getAllAiImages()
 
 --- 文件开始: src\Database\DatabaseManager.h ---
 
+/**
+ * @file DatabaseManager.h
+ * @brief 数据库管理器头文件
+ * 
+ * 该文件定义了DatabaseManager类，负责应用程序的数据库操作。
+ * 使用单例模式管理数据库连接，提供会话和消息的增删改查接口。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #pragma once
+
 #include <QObject>
 #include <QSqlDatabase>
 #include <QVector>
 #include "../Model/DataModels.h"
 
+/**
+ * @brief 数据库管理器类
+ * 
+ * 采用单例模式管理数据库连接，提供会话和消息的持久化存储功能。
+ * 支持会话的创建、查询、重命名、删除以及消息的添加和查询操作。
+ */
 class DatabaseManager : public QObject
 {
     Q_OBJECT
+
 public:
-    // 单例模式：全局只有一个数据库连接
+    /**
+     * @brief 获取单例实例
+     * @return DatabaseManager& 数据库管理器单例引用
+     */
     static DatabaseManager& instance();
 
-    // 初始化：打开数据库、建表
+    /**
+     * @brief 初始化数据库
+     * @return bool 初始化是否成功
+     * 
+     * 打开数据库连接并创建必要的数据表
+     */
     bool init();
 
-    // ==========================================
-    // 【新增】会话操作接口 (Session API)
-    // ==========================================
-
-    // 创建新会话，返回新生成的 ID
+    /**
+     * @brief 创建新会话
+     * @param name 会话名称
+     * @return int 新创建的会话ID，失败返回-1
+     */
     int createSession(const QString& name);
 
-    // 获取所有会话 (用于初始化左侧列表)
+    /**
+     * @brief 获取所有会话
+     * @return QVector<SessionData> 所有会话的数据列表
+     * 
+     * 用于初始化左侧会话列表
+     */
     QVector<SessionData> getAllSessions();
 
-    // 重命名会话
+    /**
+     * @brief 重命名会话
+     * @param id 会话ID
+     * @param newName 新会话名称
+     * @return bool 重命名是否成功
+     */
     bool renameSession(int id, const QString& newName);
 
-    // 删除会话 (会连带删除该会话下的所有消息)
+    /**
+     * @brief 删除会话
+     * @param id 会话ID
+     * @return bool 删除是否成功
+     * 
+     * 删除会话时会连带删除该会话下的所有消息
+     */
     bool deleteSession(int id);
 
-    // ==========================================
-    // 【新增】消息操作接口 (Message API)
-    // ==========================================
-
-    // 存入一条新消息，返回新 ID
+    /**
+     * @brief 添加新消息
+     * @param msg 消息数据
+     * @return int 新消息的ID，失败返回-1
+     */
     int addMessage(const MessageData& msg);
 
-    // 获取某个会话的所有消息 (用于点击会话后加载历史)
+    /**
+     * @brief 获取指定会话的所有消息
+     * @param sessionId 会话ID
+     * @return QVector<MessageData> 消息数据列表
+     * 
+     * 用于点击会话后加载历史消息
+     */
     QVector<MessageData> getMessages(int sessionId);
 
-    // 【新增】获取所有生成的图片路径（按时间倒序）
+    /**
+     * @brief 获取所有生成的图片路径
+     * @return QVector<QString> 图片路径列表（按时间倒序）
+     */
     QVector<QString> getAllAiImages();
 
 private:
+    /**
+     * @brief 构造函数
+     * @param parent 父对象指针
+     */
     explicit DatabaseManager(QObject *parent = nullptr);
+
+    /**
+     * @brief 析构函数
+     */
     ~DatabaseManager();
+
+    /**
+     * @brief 禁用拷贝构造函数
+     */
     DatabaseManager(const DatabaseManager&) = delete;
+
+    /**
+     * @brief 禁用拷贝赋值运算符
+     */
     DatabaseManager& operator=(const DatabaseManager&) = delete;
+
+    /**
+     * @brief 创建数据表
+     * 
+     * 创建会话表和消息表（如果不存在）
+     */
     void createTables();
 
 private:
-    QSqlDatabase m_db;
+    QSqlDatabase m_db; ///< 数据库连接对象
 };
 
 
@@ -1319,55 +1551,88 @@ private:
 /**
  * @file DataModels.h
  * @brief 核心数据模型定义
+ * 
+ * 该文件定义了应用程序的核心数据模型，包括消息角色枚举、会话数据结构和消息数据结构。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
  */
 
 #pragma once
 #include <QString>
 #include <QDateTime>
 
-// 消息发送者角色 (对应数据库里的 role 字段)
+/**
+ * @brief 消息发送者角色枚举
+ * 
+ * 定义消息发送者的角色类型，对应数据库里的role字段。
+ */
 enum class MessageRole {
-    User, // 用户
-    AI    // AI
+    User, ///< 用户角色
+    AI    ///< AI角色
 };
 
-// 会话数据结构
+/**
+ * @brief 会话数据结构
+ * 
+ * 包含会话的基本信息，用于数据库存储和界面显示。
+ */
 struct SessionData {
-    int id = -1;                // 数据库ID
-    QString name;               // 会话标题
-    qint64 createdAt = 0;       // 创建时间戳
+    int id = -1;                ///< 数据库ID
+    QString name;               ///< 会话标题
+    qint64 createdAt = 0;       ///< 创建时间戳
 
-    // 1. 默认构造函数 (必须有)
+    /**
+     * @brief 默认构造函数
+     */
     SessionData() {}
 
-    // 2. 便捷构造函数 (方便代码里一行初始化)
+    /**
+     * @brief 便捷构造函数
+     * @param _id 会话ID
+     * @param _name 会话名称
+     */
     SessionData(int _id, const QString& _name)
         : id(_id), name(_name), createdAt(QDateTime::currentMSecsSinceEpoch()) {}
 };
 
-// 消息数据结构
+/**
+ * @brief 消息数据结构
+ * 
+ * 包含消息的完整信息，支持文本和图片两种类型。
+ */
 struct MessageData {
-    int id = -1;
-    int sessionId = -1;         // 外键
-    MessageRole role = MessageRole::User;
+    int id = -1;                ///< 消息ID
+    int sessionId = -1;         ///< 外键，关联的会话ID
+    MessageRole role = MessageRole::User; ///< 消息发送者角色
 
-    QString text;               // 文字内容
-    QString imagePath;          // 本地图片路径 (如果是文字则为空)
+    QString text;               ///< 文字内容
+    QString imagePath;          ///< 本地图片路径（如果是文字则为空）
 
-    qint64 timestamp = 0;       // 时间
+    qint64 timestamp = 0;       ///< 消息时间戳
 
-    // 辅助函数：判断是否是图片
+    /**
+     * @brief 判断是否是图片消息
+     * @return bool 是否为图片消息
+     */
     bool isImage() const { return !imagePath.isEmpty(); }
 
-    // 1. 默认构造函数 (必须有，用于 QSqlQuery 读取时先创建空对象)
+    /**
+     * @brief 默认构造函数
+     */
     MessageData() {}
 
-    // 2. 【关键修复】便捷构造函数 (DatabaseManager.cpp 第192行用的就是这个)
-    // 参数: 会话ID, 角色, 文本内容, 图片路径(默认空)
+    /**
+     * @brief 便捷构造函数
+     * @param sid 会话ID
+     * @param r 消息角色
+     * @param t 文本内容
+     * @param img 图片路径（可选，默认为空）
+     */
     MessageData(int sid, MessageRole r, const QString& t, const QString& img = "")
         : sessionId(sid), role(r), text(t), imagePath(img)
     {
-        // 自动填入当前时间
         timestamp = QDateTime::currentMSecsSinceEpoch();
     }
 };
@@ -1407,7 +1672,7 @@ enum class WorkflowType {
     PortraitEnhance = 6,  ///< 人像美化
     BackgroundRemove = 7, ///< 背景移除
     ColorCorrection = 8,   ///< 色彩校正
-    VisionCaption = 9 // 【新增】视觉反推
+    VisionCaption = 9      ///< 视觉反推
 };
 
 /**
@@ -1442,85 +1707,95 @@ struct WorkflowInfo {
 
 --- 文件开始: src\Network\ComfyApiService.cpp ---
 
+/**
+ * @file ComfyApiService.cpp
+ * @brief ComfyUI API服务实现文件
+ * 
+ * 该文件实现了ComfyApiService类，用于与ComfyUI服务器进行通信。
+ * 包含HTTP请求和WebSocket连接功能，支持图片生成进度监控和结果接收。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "ComfyApiService.h"
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>   // 解析数组需要
+#include <QJsonArray>
 #include <QUrl>
-#include <QUrlQuery>    // 【关键修复】
+#include <QUrlQuery>
 #include <QDebug>
 #include <QWebSocket>
-#include <QHttpMultiPart> // 【新增】
-#include <QHttpPart>      // 【新增】
-#include <QFile>          // 【新增】
-#include <QFileInfo>      // 【新增】
+#include <QHttpMultiPart>
+#include <QHttpPart>
+#include <QFile>
+#include <QFileInfo>
 #include <QSslConfiguration>
 #include <QSslSocket>
 
+/**
+ * @brief 构造函数
+ * @param parent 父对象指针
+ */
 ComfyApiService::ComfyApiService(QObject *parent)
     : QObject(parent)
 {
     m_networkManager = new QNetworkAccessManager(this);
     m_webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
-    // 生成 ID
     m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 
-    // --- 1. 连接成功信号 ---
     connect(m_webSocket, &QWebSocket::connected, this, [=](){
-        qDebug() << "✅ WebSocket 连接成功!";
+        qDebug() << "WebSocket 连接成功!";
         emit serverConnected();
     });
 
-    // --- 2. 连接断开信号 (关键) ---
     connect(m_webSocket, &QWebSocket::disconnected, this, [=](){
-        qDebug() << "❌ WebSocket 连接断开";
+        qDebug() << "WebSocket 连接断开";
         emit serverDisconnected();
     });
 
-    // --- 3. 连接错误信号 (关键) ---
-    // Qt6 写法：使用 lambda 接收错误信息
     connect(m_webSocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error){
         Q_UNUSED(error);
         QString errStr = m_webSocket->errorString();
-        qDebug() << "⚠️ WebSocket 错误:" << errStr;
+        qDebug() << "WebSocket 错误:" << errStr;
         emit errorOccurred(errStr);
     });
 
-    // --- 4. 收到消息信号 ---
     connect(m_webSocket, &QWebSocket::textMessageReceived,
             this, &ComfyApiService::onTextMessageReceived);
 }
 
+/**
+ * @brief 析构函数
+ */
 ComfyApiService::~ComfyApiService()
 {
-    // socket 和 networkManager 指定了 parent 为 this，析构时会自动清理
-    // 但为了优雅退出，可以在这里手动 close 一下
     if (m_webSocket) {
         m_webSocket->close();
     }
 }
 
+/**
+ * @brief 连接到ComfyUI服务器
+ * @param fullUrl 服务器完整URL
+ */
 void ComfyApiService::connectToHost(const QString& fullUrl)
 {
     QString urlStr = fullUrl.trimmed();
 
-    // 1. 容错处理：如果用户没写 http://，默认补上
     if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
         urlStr = "http://" + urlStr;
     }
 
-    // 2. 去掉末尾的斜杠 (为了后续拼接方便)
     if (urlStr.endsWith("/")) {
         urlStr.chop(1);
     }
 
-    // 3. 保存 HTTP 基础地址 (例如: http://frp.top:12345)
     m_apiBaseUrl = urlStr;
 
-    // 4. 生成 WebSocket 地址
-    // 把 http 换成 ws，把 https 换成 wss
     QString wsUrl = m_apiBaseUrl;
     if (wsUrl.startsWith("https://")) {
         wsUrl.replace(0, 8, "wss://");
@@ -1528,91 +1803,86 @@ void ComfyApiService::connectToHost(const QString& fullUrl)
         wsUrl.replace(0, 7, "ws://");
     }
 
-    // 加上 WebSocket 路径和 ClientID
     wsUrl += QString("/ws?clientId=%1").arg(m_clientId);
 
-    qDebug() << "🔗 准备连接:" << wsUrl;
+    qDebug() << "准备连接:" << wsUrl;
 
     if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
         m_webSocket->close();
     }
 
-    // ================== 【新增代码开始】 ==================
-    // 配置 SSL，允许自签名证书或不安全的证书
     QSslConfiguration sslConfig = m_webSocket->sslConfiguration();
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // 核心：不验证服务器证书
+    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
     sslConfig.setProtocol(QSsl::AnyProtocol);
     m_webSocket->setSslConfiguration(sslConfig);
 
-    // 额外保险：如果发生 SSL 错误，强制忽略
     connect(m_webSocket, &QWebSocket::sslErrors, this, [=](const QList<QSslError>& errors){
-        qDebug() << "⚠️ 捕获到 SSL 错误 (已忽略):" << errors.first().errorString();
+        qDebug() << "捕获到 SSL 错误 (已忽略):" << errors.first().errorString();
         m_webSocket->ignoreSslErrors();
     });
-    // ================== 【新增代码结束】 ==================
 
-
-    // 打开新连接
     m_webSocket->open(QUrl(wsUrl));
 }
 
+/**
+ * @brief 发送提示词生成任务
+ * @param workflow 工作流JSON对象
+ */
 void ComfyApiService::queuePrompt(const QJsonObject& workflow)
 {
-    // 修改这里：使用 m_apiBaseUrl
     QUrl url(m_apiBaseUrl + "/prompt");
     QNetworkRequest request(url);
 
-    // ... 下面的代码保持不变 ...
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QJsonObject payload;
     payload["prompt"] = workflow;
     payload["client_id"] = m_clientId;
     QByteArray data = QJsonDocument(payload).toJson();
 
-    qDebug() << "Posting prompt to:" << url.toString(); // 方便调试
+    qDebug() << "Posting prompt to:" << url.toString();
     QNetworkReply* reply = m_networkManager->post(request, data);
 
-    // 【修改为 Lambda 写法】
     connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
-        Q_UNUSED(errors);          // 防止编译器警告“未使用的变量”
-        reply->ignoreSslErrors();  // 强制忽略错误
+        Q_UNUSED(errors);
+        reply->ignoreSslErrors();
     });
 
     connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onPostFinished);
 }
 
+/**
+ * @brief 处理HTTP POST请求完成
+ */
 void ComfyApiService::onPostFinished()
 {
-    // 获取触发这个槽的 reply 对象
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply) return;
 
     if (reply->error() == QNetworkReply::NoError) {
-        // 请求成功！
         QByteArray response = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(response);
         QJsonObject obj = doc.object();
 
-        // ComfyUI 会返回 {"prompt_id": "xxx", "number": ...}
         QString promptId = obj["prompt_id"].toString();
 
-        // 【新增】保存这个 ID，后面收到消息时核对是不是我们发的
         m_currentPromptId = promptId;
 
-        qDebug() << "✅ 任务发送成功! ID:" << promptId;
+        qDebug() << "任务发送成功! ID:" << promptId;
 
         emit promptQueued(promptId);
     } else {
-        // 请求失败
         QString err = "发送任务失败: " + reply->errorString();
-        qDebug() << "❌" << err;
+        qDebug() << err;
         emit errorOccurred(err);
     }
 
-    reply->deleteLater(); // 记得清理内存
+    reply->deleteLater();
 }
 
-
+/**
+ * @brief 处理WebSocket文本消息
+ * @param message 接收到的消息内容
+ */
 void ComfyApiService::onTextMessageReceived(const QString &message)
 {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
@@ -1620,7 +1890,6 @@ void ComfyApiService::onTextMessageReceived(const QString &message)
     QString msgType = root["type"].toString();
     QJsonObject data = root["data"].toObject();
 
-    // 1. 处理流式消息
     if (msgType == "cloudart_stream") {
         QString token = data["token"].toString();
         bool finished = data["finished"].toBool();
@@ -1628,21 +1897,15 @@ void ComfyApiService::onTextMessageReceived(const QString &message)
         return;
     }
 
-    // 2. 处理节点执行完成
     if (msgType == "executed") {
-        // 【强制转换】把 node 转成字符串，防止 JSON 数字/字符串类型不匹配
         QString nodeId = QString::number(data["node"].toInt());
-        // 如果转数字失败（说明本身是字符串），再直接转字符串
         if (nodeId == "0") nodeId = data["node"].toString();
 
         QString promptId = data["prompt_id"].toString();
 
-        // 【强力调试】打印这一行，看看到底收到了什么
-        qDebug() << "🔍 检查结束条件 | 收到ID:" << nodeId << " | 目标ID: 4 | 任务匹配:" << (promptId == m_currentPromptId);
+        qDebug() << "检查结束条件 | 收到ID:" << nodeId << " | 目标ID: 4 | 任务匹配:" << (promptId == m_currentPromptId);
 
-        // 逻辑 A: 文生图/高清修复 (SaveImage)
         if (promptId == m_currentPromptId && (nodeId == "20" || nodeId == "1" || nodeId == "9")) {
-            // ... (保持原有的图片下载逻辑) ...
             QJsonObject output = data["output"].toObject();
             QJsonArray images = output["images"].toArray();
             if (!images.isEmpty()) {
@@ -1653,16 +1916,20 @@ void ComfyApiService::onTextMessageReceived(const QString &message)
             }
         }
 
-        // 逻辑 B: 视觉反推 (PreviewAny)
-        // 【修改】放宽条件，只要是当前任务且 ID 是 4，或者它是唯一的输出节点
         if (promptId == m_currentPromptId && nodeId == "4") {
-            qDebug() << "🛑 触发反推强制解锁";
+            qDebug() << "触发反推强制解锁";
             emit streamTokenReceived("", true);
         }
     }
 }
 
-
+/**
+ * @brief 获取图片数据
+ * @param filename 图片文件名
+ * @param subfolder 子文件夹路径
+ * @param type 图片类型
+ * @param promptId 提示词ID
+ */
 void ComfyApiService::getImage(const QString& filename, const QString& subfolder, const QString& type, const QString& promptId)
 {
     QUrl url(m_apiBaseUrl + "/view");
@@ -1675,25 +1942,25 @@ void ComfyApiService::getImage(const QString& filename, const QString& subfolder
     QNetworkRequest request(url);
     QNetworkReply* reply = m_networkManager->get(request);
 
-    // 【修改为 Lambda 写法】
     connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
         Q_UNUSED(errors);
         reply->ignoreSslErrors();
     });
 
-    // 【关键】把 ID 和 文件名 存入 reply 的属性中，以便回调时使用
     reply->setProperty("promptId", promptId);
     reply->setProperty("filename", filename);
 
     connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onImageDownloadFinished);
 }
 
+/**
+ * @brief 处理图片下载完成
+ */
 void ComfyApiService::onImageDownloadFinished()
 {
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply) return;
 
-    // 【关键】取出刚才存的数据
     QString promptId = reply->property("promptId").toString();
     QString filename = reply->property("filename").toString();
 
@@ -1701,78 +1968,70 @@ void ComfyApiService::onImageDownloadFinished()
         QByteArray data = reply->readAll();
         QPixmap pixmap;
         if (pixmap.loadFromData(data)) {
-            qDebug() << "🖼️ 图片下载成功:" << filename;
+            qDebug() << "图片下载成功:" << filename;
 
-            // 【修改】发送包含 ID 和文件名的信号
             emit imageReceived(promptId, filename, pixmap);
         } else {
-            qDebug() << "❌ 图片数据损坏";
+            qDebug() << "图片数据损坏";
         }
     } else {
-        qDebug() << "❌ 图片下载失败:" << reply->errorString();
+        qDebug() << "图片下载失败:" << reply->errorString();
     }
     reply->deleteLater();
 }
 
-
+/**
+ * @brief 上传图片到服务器
+ * @param localPath 本地图片路径
+ */
 void ComfyApiService::uploadImage(const QString& localPath)
 {
-    // 1. 打开本地文件
     QFile* file = new QFile(localPath);
     if (!file->open(QIODevice::ReadOnly)) {
-        qDebug() << "❌ 无法打开本地图片:" << localPath;
+        qDebug() << "无法打开本地图片:" << localPath;
         delete file;
         return;
     }
 
-    // 2. 构造 Multipart 表单
     QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
 
-    // 图片部分
     QHttpPart imagePart;
     QString fileName = QFileInfo(localPath).fileName();
 
-    // 设置头信息
-    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant("image/png")); // 假设是png/jpg
+    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, QVariant("image/png"));
     imagePart.setHeader(QNetworkRequest::ContentDispositionHeader,
                         QVariant(QString("form-data; name=\"image\"; filename=\"%1\"").arg(fileName)));
 
     imagePart.setBodyDevice(file);
-    file->setParent(multiPart); // 让 multiPart 管理 file 的生命周期
+    file->setParent(multiPart);
 
     multiPart->append(imagePart);
 
-    // 3. 构造请求 URL: http://ip:port/upload/image
     QUrl url(m_apiBaseUrl + "/upload/image");
     QNetworkRequest request(url);
 
-    qDebug() << "📤 正在上传图片:" << localPath;
+    qDebug() << "正在上传图片:" << localPath;
 
-    // 4. 发送 POST
     QNetworkReply* reply = m_networkManager->post(request, multiPart);
-    multiPart->setParent(reply); // 让 reply 管理 multiPart 的生命周期
+    multiPart->setParent(reply);
 
-    // 【修改为 Lambda 写法】
     connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
         Q_UNUSED(errors);
         reply->ignoreSslErrors();
     });
 
-    // 5. 处理结果
     connect(reply, &QNetworkReply::finished, this, [=](){
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray response = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(response);
             QJsonObject obj = doc.object();
 
-            // ComfyUI 返回: {"name": "xxx.png", "subfolder": "...", "type": "input"}
             QString serverName = obj["name"].toString();
-            // 如果有 subfolder，可以拼一下，通常 simple workflow 不需要
 
-            qDebug() << "✅ 图片上传成功! 服务器文件名:" << serverName;
-            emit imageUploaded(serverName); // 发出信号
+            qDebug() << "图片上传成功! 服务器文件名:" << serverName;
+            emit imageUploaded(serverName);
         } else {
-            qDebug() << "❌ 上传失败:" << reply->errorString();
+            qDebug() << "上传失败:" << reply->errorString();
         }
         reply->deleteLater();
     });
@@ -1843,10 +2102,19 @@ public:
      */
     void queuePrompt(const QJsonObject& workflow);
 
-    // 【新增】获取图片数据的接口 (通过 HTTP GET)
+    /**
+     * @brief 获取图片数据
+     * @param filename 图片文件名
+     * @param subfolder 子文件夹路径
+     * @param type 图片类型
+     * @param promptId 提示词ID
+     */
     void getImage(const QString& filename, const QString& subfolder, const QString& type, const QString& promptId);
 
-    // 【新增】上传图片函数
+    /**
+     * @brief 上传图片到服务器
+     * @param localPath 本地图片路径
+     */
     void uploadImage(const QString& localPath);
 
 signals:
@@ -1875,32 +2143,50 @@ signals:
 
     void promptQueued(const QString& promptId);
 
-    // 【新增】图片下载完成信号
+    /**
+     * @brief 图片下载完成信号
+     * @param promptId 提示词ID
+     * @param filename 文件名
+     * @param img 图片数据
+     */
     void imageReceived(const QString& promptId, const QString& filename, const QPixmap& img);
 
-    // 【新增】上传成功信号
+    /**
+     * @brief 图片上传成功信号
+     * @param serverFileName 服务器文件名
+     */
     void imageUploaded(const QString& serverFileName);
 
-    // 【新增】流式文字信号(如果之前没加)
+    /**
+     * @brief 流式文字接收信号
+     * @param token 接收到的文本
+     * @param finished 是否完成
+     */
     void streamTokenReceived(const QString& token, bool finished);
 
 private slots:
-    // 【新增】处理 HTTP 回复
+    /**
+     * @brief 处理HTTP POST请求完成
+     */
     void onPostFinished();
 
-    // 【新增】处理 WebSocket 文本消息
+    /**
+     * @brief 处理WebSocket文本消息
+     * @param message 接收到的消息内容
+     */
     void onTextMessageReceived(const QString &message);
 
-    // 【新增】处理图片下载完成
+    /**
+     * @brief 处理图片下载完成
+     */
     void onImageDownloadFinished();
 
 private:
     QNetworkAccessManager* m_networkManager; ///< HTTP网络管理器
     QWebSocket* m_webSocket; ///< WebSocket连接
-    QString m_apiBaseUrl;
-    // 【新增】记录当前的任务ID，用于匹配
-    QString m_currentPromptId;
-    QString m_clientId;
+    QString m_apiBaseUrl; ///< API基础URL
+    QString m_currentPromptId; ///< 当前任务ID，用于匹配
+    QString m_clientId; ///< 客户端ID
 };
 
 
@@ -2208,8 +2494,6 @@ void MainWindow::setupUi()
     // =========================================================
     // 【核心逻辑 2】图片下载完毕
     // =========================================================
-    // 注意：请确保你的 ComfyApiService 信号是这个签名：
-    // void imageReceived(const QString& promptId, const QString& filename, const QPixmap& img);
     connect(m_apiService, &ComfyApiService::imageReceived, this,
             [this](const QString& promptId, const QString& filename, const QPixmap& img){
 
@@ -2981,9 +3265,6 @@ void MainWindow::loadAndConnect()
 #include "../Database/DatabaseManager.h"
 #include "Components/SettingsDialog.h"
 
-
-// --- 前向声明 (Forward Declarations) ---
-// 这样做的好处是不用在这里 #include 所有头文件，编译更快，也不容易报错
 class InputPanel;
 class WorkflowSelector;
 class ReferencePopup;
@@ -3012,7 +3293,7 @@ public:
      * @param parent 父窗口指针
      */
     explicit MainWindow(QWidget *parent = nullptr);
-    
+
     /**
      * @brief 析构函数
      */
@@ -3023,42 +3304,47 @@ private slots:
      * @brief 工作流按钮点击槽函数
      */
     void onWorkflowBtnClicked();
-    
+
     /**
      * @brief 参考图按钮点击槽函数
      */
     void onRefBtnClicked();
-    
+
     /**
      * @brief 工作流选择槽函数
      * @param info 选中的工作流信息
      */
     void onWorkflowSelected(const WorkflowInfo& info);
-    
+
     /**
      * @brief 生成按钮点击槽函数
      * @param prompt 用户输入的提示词
      */
     void onGenerateClicked(const QString& prompt);
-    
+
     /**
      * @brief 切换左侧容器显示状态
      */
     void onToggleLeftContainer();
-    
+
     /**
      * @brief 切换到会话列表页面
      */
     void switchToSessionList();
-    
+
     /**
      * @brief 切换到历史记录页面
      */
     void switchToHistoryWindow();
 
-    // 【新增】处理反推按钮点击
+    /**
+     * @brief 处理反推按钮点击
+     */
     void onInterrogateClicked();
 
+    /**
+     * @brief 加载并连接各个组件
+     */
     void loadAndConnect();
 
 protected:
@@ -3079,10 +3365,14 @@ private:
      */
     void updateSidebarPosition();
 
-    // 【新增】加载所有历史会话
+    /**
+     * @brief 加载所有历史会话
+     */
     void loadSessionList();
 
-    // 【新增】创建新会话的逻辑
+    /**
+     * @brief 创建新会话
+     */
     void createNewSession();
 
     /**
@@ -3091,85 +3381,69 @@ private:
      */
     void switchLeftPanel(int targetIndex);
 
+    /**
+     * @brief 保存图片到本地
+     * @param img 要保存的图片
+     * @return QString 保存后的文件路径
+     */
     QString saveImageToLocal(const QPixmap& img);
 
-    // --- 成员变量 (持有各个组件的指针) ---
-    // 左侧
+    /**
+     * @brief 加载指定会话的历史记录到聊天区
+     * @param sessionId 会话ID
+     */
+    void loadSessionHistory(int sessionId);
+
+    /**
+     * @brief 切换忙碌状态
+     * @param running 是否正在执行任务
+     */
+    void setJobRunning(bool running);
+
+private:
     QStackedWidget* m_leftStack; ///< 左侧容器堆栈
     SessionList* m_sessionList; ///< 会话列表组件
-
-    // 右侧
     ChatArea* m_chatArea; ///< 聊天区域组件
     InputPanel* m_inputPanel; ///< 底部控制面板组件
-
-    // 浮动窗口 (Popups)
     WorkflowSelector* m_wfSelector; ///< 工作流选择面板组件
     ReferencePopup* m_refPopup; ///< 参考图上传面板组件
-
-    // 切换按钮和动画
     SidebarControl* m_sidebarControl; ///< 侧边栏控制组件
     QPropertyAnimation* m_leftContainerAnimation; ///< 左侧容器动画效果
     bool m_leftContainerVisible; ///< 左侧容器是否可见
     int m_leftContainerOriginalWidth; ///< 左侧容器的初始宽度
     int m_currentPageIndex; ///< 当前显示的页面索引
-    
-    HistoryGallery* m_historyGallery; // 【新增】新的类型
-    
-    /** 主布局 */
-    QHBoxLayout* m_mainLayout;
-    
-    /** API服务 */
-    ComfyApiService* m_apiService;
-
-    // 【新增】业务逻辑管理器
-    WorkflowManager* m_wfManager;
-
-    // 【新增】记录当前选中的工作流类型 (默认为文生图)
-    WorkflowType m_currentWorkflowType = WorkflowType::TextToImage;
-
-    // 1. 暂存刚刚创建的加载气泡（等待 API 返回 prompt_id）
-    ChatBubble* m_tempBubbleForId = nullptr;
-
-    // 2. 映射表：任务ID -> 气泡指针 (用于在图片生成后找到对应的气泡)
-    QMap<QString, ChatBubble*> m_pendingBubbles;
-
-    // 【新增】标记当前上传操作是否为了高清修复
-    bool m_isUploadingForUpscale = false;
-
-    // 【新增】暂存高清修复的气泡（用于绑定ID）
-    ChatBubble* m_tempUpscaleBubble = nullptr;
-
-    // 【新增】是否正在执行任务（忙碌状态）
-    bool m_isJobRunning = false;
-
-    // 【新增】切换忙碌状态的辅助函数
-    void setJobRunning(bool running);
-
-    // 【新增】标记：当前上传是否是为了反推提示词？
-    bool m_isUploadingForInterrogate = false;
-
-    // 【新增】记住反推用的图片名（给后续图生图备用，可选）
-    QString m_currentServerRefImg;
-
-    // 【新增】标记：当前上传是否为了图生图生成
-    bool m_isUploadingForI2I = false;
-
-    // 【新增】暂存图生图需要的参数 (提示词、种子)，等上传完了一起用
-    QMap<QString, QVariant> m_pendingI2IParams;
-
-    // 【新增】用于暂存流式传输的完整文本
-    QString m_accumulatedStreamText;
-
-    // 【新增】加载指定会话的历史记录到聊天区
-    void loadSessionHistory(int sessionId);
-
-
+    HistoryGallery* m_historyGallery; ///< 历史记录画廊组件
+    QHBoxLayout* m_mainLayout; ///< 主布局
+    ComfyApiService* m_apiService; ///< API服务
+    WorkflowManager* m_wfManager; ///< 业务逻辑管理器
+    WorkflowType m_currentWorkflowType; ///< 当前选中的工作流类型
+    ChatBubble* m_tempBubbleForId; ///< 暂存刚刚创建的加载气泡
+    QMap<QString, ChatBubble*> m_pendingBubbles; ///< 任务ID到气泡指针的映射表
+    bool m_isUploadingForUpscale; ///< 标记当前上传操作是否为了高清修复
+    ChatBubble* m_tempUpscaleBubble; ///< 暂存高清修复的气泡
+    bool m_isJobRunning; ///< 是否正在执行任务（忙碌状态）
+    bool m_isUploadingForInterrogate; ///< 标记当前上传是否为了反推提示词
+    QString m_currentServerRefImg; ///< 记住反推用的图片名
+    bool m_isUploadingForI2I; ///< 标记当前上传是否为了图生图生成
+    QMap<QString, QVariant> m_pendingI2IParams; ///< 暂存图生图需要的参数
+    QString m_accumulatedStreamText; ///< 用于暂存流式传输的完整文本
 };
 
 
 --- 文件结束: src\Ui\MainWindow.h ---
 
 --- 文件开始: src\Ui\Components\ChatArea.cpp ---
+
+/**
+ * @file ChatArea.cpp
+ * @brief 聊天区域组件实现文件
+ * 
+ * 该文件实现了ChatArea类，提供聊天消息的展示功能，支持用户消息、AI消息和图片的显示。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
 
 #include "ChatArea.h"
 #include "ChatBubble.h"
@@ -3183,18 +3457,15 @@ ChatArea::ChatArea(QWidget *parent) : QWidget(parent)
 
 void ChatArea::setupUi()
 {
-    // 1. 主布局
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // 2. 滚动区域
     m_scrollArea = new QScrollArea(this);
-    m_scrollArea->setWidgetResizable(true); // 关键！否则内部无法撑开
-    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 只需垂直滚动
-    m_scrollArea->setFrameShape(QFrame::NoFrame); // 无边框
+    m_scrollArea->setWidgetResizable(true);
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_scrollArea->setFrameShape(QFrame::NoFrame);
 
-    // 美化滚动条 (和 SessionList 一致)
     m_scrollArea->setStyleSheet(
         "QScrollArea { background: #343541; border: none; }"
         "QScrollBar:vertical { border: none; background: #343541; width: 10px; margin: 0px; }"
@@ -3203,14 +3474,13 @@ void ChatArea::setupUi()
         "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
         );
 
-    // 3. 滚动内容容器
     m_scrollContent = new QWidget();
-    m_scrollContent->setStyleSheet("background-color: transparent;"); // 透明，透出 ScrollArea 背景
+    m_scrollContent->setStyleSheet("background-color: transparent;");
 
     m_contentLayout = new QVBoxLayout(m_scrollContent);
-    m_contentLayout->setContentsMargins(20, 20, 20, 20); // 给气泡留出四周空隙
-    m_contentLayout->setSpacing(20); // 气泡之间的间距
-    m_contentLayout->addStretch();   // 初始弹簧，把第一条消息顶在最上面
+    m_contentLayout->setContentsMargins(20, 20, 20, 20);
+    m_contentLayout->setSpacing(20);
+    m_contentLayout->addStretch();
 
     m_scrollArea->setWidget(m_scrollContent);
     mainLayout->addWidget(m_scrollArea);
@@ -3220,7 +3490,6 @@ void ChatArea::addUserMessage(const QString& text)
 {
     ChatBubble* bubble = new ChatBubble(ChatRole::User, text, m_scrollContent);
 
-    // 插入到弹簧之前 (count()-1)
     m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
 
     scrollToBottom();
@@ -3228,34 +3497,26 @@ void ChatArea::addUserMessage(const QString& text)
 
 ChatBubble* ChatArea::addLoadingBubble()
 {
-    // 1. 创建一个空内容的 AI 气泡
-    // (我们在 ChatBubble 构造函数里处理了空字符串 -> Loading 态)
     ChatBubble* bubble = new ChatBubble(ChatRole::AI, "", m_scrollContent);
 
-    // 2. 连接它的信号
-    // 当用户在气泡上右键点击“高清修复”时，信号会一路传出去
     connect(bubble, &ChatBubble::upscaleRequested, this, &ChatArea::upscaleRequested);
 
-    // 3. 插入界面
     m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
     scrollToBottom();
 
     return bubble;
 }
 
-// 顺便修改一下旧的 addAiImage，也要连信号
 void ChatArea::addAiImage(const QPixmap& img)
 {
     ChatBubble* bubble = new ChatBubble(ChatRole::AI, img, m_scrollContent);
-    connect(bubble, &ChatBubble::upscaleRequested, this, &ChatArea::upscaleRequested); // 连接信号
+    connect(bubble, &ChatBubble::upscaleRequested, this, &ChatArea::upscaleRequested);
     m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
     scrollToBottom();
 }
 
 void ChatArea::scrollToBottom()
 {
-    // 使用 QTimer::singleShot 0ms 延时
-    // 原因是：界面布局刷新需要时间，直接 setValue 可能滚动不到最底部
     QTimer::singleShot(10, this, [=](){
         QScrollBar* bar = m_scrollArea->verticalScrollBar();
         bar->setValue(bar->maximum());
@@ -3264,59 +3525,43 @@ void ChatArea::scrollToBottom()
 
 void ChatArea::clear()
 {
-    // 【核心修复】
-    // 这里的逻辑是：只要布局里的元素多于 1 个（那个 1 就是最后的弹簧），就一直删。
-    // 必须从 index 0 (第一个) 开始删，这样永远删的是最上面的气泡。
-    // 最后的弹簧会一直留在那里，直到它变成 index 0。
-
     while (m_contentLayout->count() > 1) {
-        // 取出第一个元素 (气泡)
         QLayoutItem *item = m_contentLayout->takeAt(0);
 
         if (item->widget()) {
-            delete item->widget(); // 销毁气泡控件
+            delete item->widget();
         }
-        delete item; // 销毁布局项
+        delete item;
     }
 
-    // 重置状态
     m_currentSessionId = -1;
-    m_currentStreamBubble = nullptr; // 别忘了重置这个
+    m_currentStreamBubble = nullptr;
 
     this->update();
 }
 
-
 void ChatArea::handleStreamToken(const QString& token, bool finished)
 {
-    // 【关键修复 1】如果是单纯的结束信号（没有内容），且当前没有活跃气泡，直接忽略
-    // 这能防止“强制解锁信号”创建一个空气泡
     if (finished && token.isEmpty() && !m_currentStreamBubble) {
         return;
     }
 
-    // 【关键修复 2】过滤中间的空包
     if (token.isEmpty() && !finished) {
         return;
     }
 
-    // 2. 如果没有正在打字的气泡，造一个新的
     if (!m_currentStreamBubble) {
-        // 如果能走到这里，说明 token 肯定不为空
         m_currentStreamBubble = new ChatBubble(ChatRole::AI, token, m_scrollContent);
         m_contentLayout->insertWidget(m_contentLayout->count() - 1, m_currentStreamBubble);
     }
     else {
-        // 3. 追加
         if (!token.isEmpty()) {
             m_currentStreamBubble->appendText(token);
         }
     }
 
-    // 4. 滚动
     QTimer::singleShot(10, this, [this](){ scrollToBottom(); });
 
-    // 5. 结束重置
     if (finished) {
         m_currentStreamBubble = nullptr;
     }
@@ -3325,7 +3570,6 @@ void ChatArea::handleStreamToken(const QString& token, bool finished)
 void ChatArea::addUserImage(const QPixmap& img)
 {
     ChatBubble* bubble = new ChatBubble(ChatRole::User, img, m_scrollContent);
-    // User 的图通常不需要高清修复，所以不连 upscale 信号也可以
     m_contentLayout->insertWidget(m_contentLayout->count() - 1, bubble);
     scrollToBottom();
 }
@@ -3407,7 +3651,10 @@ public:
      */
     void addAiImage(const QPixmap& img);
 
-    // 【新增】添加一个加载态气泡，并返回指针
+    /**
+     * @brief 添加加载态气泡
+     * @return ChatBubble* 新创建的加载气泡指针
+     */
     ChatBubble* addLoadingBubble();
 
     /**
@@ -3415,16 +3662,31 @@ public:
      */
     void scrollToBottom();
 
-    // 【新增】处理流式文字
+    /**
+     * @brief 处理流式文字
+     * @param token 流式文本片段
+     * @param finished 是否完成
+     */
     void handleStreamToken(const QString& token, bool finished);
 
+    /**
+     * @brief 添加用户图片消息
+     * @param img 用户上传的图片
+     */
     void addUserImage(const QPixmap& img);
 
-    // 【新增】直接添加 AI 文本消息 (用于加载历史，无动画)
+    /**
+     * @brief 直接添加AI文本消息（用于加载历史，无动画）
+     * @param text AI回复的文本内容
+     */
     void addAiMessage(const QString& text);
 
 signals:
-    // 【新增】转发气泡的高清修复请求给 MainWindow
+    /**
+     * @brief 高清修复请求信号
+     * @param filename 服务器文件名
+     * @param img 图片数据
+     */
     void upscaleRequested(const QString& filename, const QPixmap& img);
 
 private:
@@ -3450,6 +3712,17 @@ private:
 
 --- 文件开始: src\Ui\Components\ChatBubble.cpp ---
 
+/**
+ * @file ChatBubble.cpp
+ * @brief 聊天气泡组件实现文件
+ * 
+ * 该文件实现了ChatBubble类，提供聊天消息气泡的显示和交互功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "ChatBubble.h"
 #include "ImageViewer.h"
 #include <QFrame>
@@ -3461,31 +3734,37 @@ private:
 #include <QClipboard>
 #include <QApplication>
 
+/**
+ * @brief 构造函数
+ * @param role 消息角色
+ * @param data 消息数据
+ * @param parent 父窗口指针
+ */
 ChatBubble::ChatBubble(ChatRole role, const QVariant& data, QWidget *parent)
     : QWidget(parent)
     , m_role(role)
 {
-    // 允许自定义背景（虽然 Bubble 本身通常透明）
     this->setAttribute(Qt::WA_StyledBackground, true);
 
     m_layout = new QHBoxLayout(this);
     m_layout->setContentsMargins(10, 10, 10, 10);
-    m_layout->setSpacing(0); // 紧凑布局
+    m_layout->setSpacing(0);
 
-    // 【新增】初始化加载动画
-    // 请确保 qrc 里有这个文件，否则会显示空白
     m_loadingMovie = new QMovie(":/images/loading.gif", QByteArray(), this);
-    m_loadingMovie->setScaledSize(QSize(40, 40)); // 设置合适的大小
+    m_loadingMovie->setScaledSize(QSize(40, 40));
 
     setupUi(data);
 }
 
+/**
+ * @brief 初始化UI布局
+ * @param data 消息数据
+ */
 void ChatBubble::setupUi(const QVariant& data)
 {
     if (m_role == ChatRole::User) {
-        m_layout->addStretch(); // 弹簧在左，内容在右
+        m_layout->addStretch();
 
-        // 【修改】让 User 也能发图
         if (data.canConvert<QPixmap>()) {
             initImageBubble(data.value<QPixmap>());
         } else {
@@ -3493,37 +3772,36 @@ void ChatBubble::setupUi(const QVariant& data)
         }
     }
     else {
-        // AI 气泡逻辑
         if (data.canConvert<QPixmap>()) {
             initImageBubble(data.value<QPixmap>());
         }
-        // 【新增】如果是空字符串，说明是占位气泡
         else if (data.typeId() == QMetaType::QString && data.toString().isEmpty()) {
-            initImageBubble(QPixmap()); // 传空图初始化
-            setLoading(true);           // 开启转圈
+            initImageBubble(QPixmap());
+            setLoading(true);
         }
         else {
-            initTextBubble(data.toString()); // 容错
+            initTextBubble(data.toString());
         }
         m_layout->addStretch();
     }
 }
 
+/**
+ * @brief 初始化文本气泡
+ * @param text 文本内容
+ */
 void ChatBubble::initTextBubble(const QString& text)
 {
     QFrame* frame = new QFrame(this);
 
-    // 样式设置
     QString style = (m_role == ChatRole::User)
-                        ? "background-color: #444654; border-radius: 8px; color: #ECECF1; padding: 10px;" // 用户样式
+                        ? "background-color: #444654; border-radius: 8px; color: #ECECF1; padding: 10px;"
                         : "background-color: #2A2B32; border-radius: 8px; color: #ECECF1; padding: 10px; border: 1px solid #444;";
     frame->setStyleSheet(style);
 
     QHBoxLayout* frameLayout = new QHBoxLayout(frame);
     frameLayout->setContentsMargins(0, 0, 0, 0);
 
-    // 【核心修复】：这里不要定义局部变量 QLabel* lblText，直接用成员变量 m_contentLabel
-    // 之前写错的代码是：QLabel* lblText = new QLabel(text, frame);
     m_contentLabel = new QLabel(text, frame);
 
     m_contentLabel->setWordWrap(true);
@@ -3531,10 +3809,8 @@ void ChatBubble::initTextBubble(const QString& text)
     m_contentLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_contentLabel->setMaximumWidth(600);
 
-    // 右键菜单策略
     m_contentLabel->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // 连接信号 (把 lblText 改为 m_contentLabel)
     connect(m_contentLabel, &QLabel::customContextMenuRequested, this, [=](const QPoint& pos){
         QMenu menu;
         menu.setStyleSheet(
@@ -3546,7 +3822,6 @@ void ChatBubble::initTextBubble(const QString& text)
         QAction* actCopyAll = menu.addAction("📋 复制全部内容");
         connect(actCopyAll, &QAction::triggered, [=](){
             QClipboard *clipboard = QApplication::clipboard();
-            // 这里要用 m_contentLabel->text() 获取最新文本
             clipboard->setText(m_contentLabel->text());
         });
 
@@ -3565,31 +3840,30 @@ void ChatBubble::initTextBubble(const QString& text)
     m_layout->addWidget(frame);
 }
 
+/**
+ * @brief 初始化图片气泡
+ * @param originalImg 原始图片
+ */
 void ChatBubble::initImageBubble(const QPixmap& originalImg)
 {
     m_currentImage = originalImg;
 
-    // 创建 Label 并保存到成员变量
     m_contentLabel = new QLabel(this);
     m_contentLabel->setStyleSheet("border-radius: 8px; border: 2px solid #444;");
 
     if (!originalImg.isNull()) {
-        // 有图：正常显示
         QSize maxDisplaySize(512, 512);
         QPixmap scaledImg = originalImg.scaled(maxDisplaySize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         m_contentLabel->setPixmap(scaledImg);
         m_contentLabel->setFixedSize(scaledImg.size());
 
-        // 开启交互
         m_contentLabel->setCursor(Qt::PointingHandCursor);
         m_contentLabel->installEventFilter(this);
     } else {
-        // 无图（Loading态）：设置一个固定大小的占位
         m_contentLabel->setFixedSize(200, 200);
         m_contentLabel->setAlignment(Qt::AlignCenter);
     }
 
-    // 阴影
     auto *shadow = new QGraphicsDropShadowEffect(this);
     shadow->setBlurRadius(15);
     shadow->setColor(QColor(0, 0, 0, 80));
@@ -3599,15 +3873,19 @@ void ChatBubble::initImageBubble(const QPixmap& originalImg)
     m_layout->addWidget(m_contentLabel);
 }
 
+/**
+ * @brief 显示图片查看器
+ */
 void ChatBubble::showViewer() {
-    // 创建查看器并显示（非模态或模态皆可，这里用模态简单点）
     ImageViewer* viewer = new ImageViewer(m_currentImage, this);
-    viewer->exec(); // 模态运行，关闭后自动释放
+    viewer->exec();
     delete viewer;
 }
 
+/**
+ * @brief 保存图片
+ */
 void ChatBubble::saveImage() {
-    // 获取系统的图片文件夹路径
     QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
     QString fileName = QFileDialog::getSaveFileName(this, "保存图片",
                                                     desktopPath + "/cloudart_gen.png",
@@ -3617,7 +3895,10 @@ void ChatBubble::saveImage() {
     }
 }
 
-// 【新增】切换加载状态
+/**
+ * @brief 切换加载状态
+ * @param loading 是否显示加载动画
+ */
 void ChatBubble::setLoading(bool loading)
 {
     if (!m_contentLabel) return;
@@ -3627,77 +3908,75 @@ void ChatBubble::setLoading(bool loading)
         m_loadingMovie->start();
     } else {
         m_loadingMovie->stop();
-        m_contentLabel->setMovie(nullptr); // 清除 Movie 绑定
+        m_contentLabel->setMovie(nullptr);
     }
 }
 
-// 【新增】生成完成后更新图片
+/**
+ * @brief 更新图片数据
+ * @param img 生成的图片数据
+ * @param serverFileName 服务器文件名
+ */
 void ChatBubble::updateImage(const QPixmap& img, const QString& serverFileName)
 {
-    setLoading(false); // 停止转圈
+    setLoading(false);
 
     m_currentImage = img;
-    m_serverFileName = serverFileName; // 记住服务器文件名 (关键！)
+    m_serverFileName = serverFileName;
 
-    // 重新计算大小并显示
     QSize maxDisplaySize(512, 512);
     QPixmap scaledImg = img.scaled(maxDisplaySize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
     m_contentLabel->setPixmap(scaledImg);
     m_contentLabel->setFixedSize(scaledImg.size());
 
-    // 激活交互（因为初始化为空时可能没激活）
     m_contentLabel->setCursor(Qt::PointingHandCursor);
-    m_contentLabel->removeEventFilter(this); // 防止重复安装
+    m_contentLabel->removeEventFilter(this);
     m_contentLabel->installEventFilter(this);
 }
 
+/**
+ * @brief 事件过滤器处理
+ * @param watched 被监视的对象
+ * @param event 事件
+ * @return bool 是否处理事件
+ */
 bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
 {
     if (qobject_cast<QLabel*>(watched) && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
 
         if (mouseEvent->button() == Qt::LeftButton) {
-            if (!m_currentImage.isNull()) showViewer(); // 左键看大图
+            if (!m_currentImage.isNull()) showViewer();
             return true;
         }
         else if (mouseEvent->button() == Qt::RightButton) {
-            // --- 右键菜单逻辑开始 ---
             QMenu menu;
-            // 统一深色风格
             menu.setStyleSheet(
                 "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
                 "QMenu::item { padding: 5px 20px; }"
                 "QMenu::item:selected { background-color: #40414F; }"
                 );
 
-            // 只要有图片，就显示这三个雷打不动的选项
             if (!m_currentImage.isNull()) {
 
-                // 1. 复制
                 QAction* actCopy = menu.addAction("❐ 复制图片");
                 connect(actCopy, &QAction::triggered, this, [=](){
                     QClipboard *clipboard = QApplication::clipboard();
                     clipboard->setPixmap(m_currentImage);
                 });
 
-                // 2. 另存为
                 QAction* actSave = menu.addAction("💾 另存为...");
                 connect(actSave, &QAction::triggered, this, &ChatBubble::saveImage);
 
                 menu.addSeparator();
 
-                // 3. 高清修复 (无条件显示)
-                // 即使是历史记录或用户发的图，只要它是张图，就能点这个
                 QAction* actUpscale = menu.addAction("✨ 高清修复 (1.5x)");
                 connect(actUpscale, &QAction::triggered, this, [=](){
-                    // 发送信号
-                    // 如果 m_serverFileName 为空也没关系，MainWindow 会负责重新上传 m_currentImage
                     emit upscaleRequested(m_serverFileName, m_currentImage);
                 });
             }
 
-            // 如果是纯文本气泡，逻辑保持不变 (复制文字)
             else if (m_contentLabel && !m_contentLabel->text().isEmpty()) {
                 QAction* actCopyText = menu.addAction("📋 复制内容");
                 connect(actCopyText, &QAction::triggered, [=](){
@@ -3707,28 +3986,25 @@ bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
 
             menu.exec(mouseEvent->globalPosition().toPoint());
             return true;
-            // --- 右键菜单逻辑结束 ---
         }
     }
     return QWidget::eventFilter(watched, event);
 }
 
-
+/**
+ * @brief 追加文本
+ * @param text 要追加的文本内容
+ */
 void ChatBubble::appendText(const QString& text)
 {
-    // 如果还没初始化，先初始化
     if (!m_contentLabel) {
         initTextBubble("");
     }
 
-    // 【优化】处理一下 Loading 态的残留 (如果之前是转圈图片)
     if (m_loadingMovie && m_loadingMovie->state() == QMovie::Running) {
         setLoading(false);
-        // 如果是从图片切回来的，可能需要重新布局，最简单的是 initTextBubble
-        // 但这里我们假设流式气泡一开始就是 TextBubble
     }
 
-    // 追加文本
     QString current = m_contentLabel->text();
     m_contentLabel->setText(current + text);
 }
@@ -3785,20 +4061,37 @@ public:
      */
     explicit ChatBubble(ChatRole role, const QVariant& data, QWidget *parent = nullptr);
 
-    // 【新增】控制加载动画
+    /**
+     * @brief 控制加载动画
+     * @param loading 是否显示加载动画
+     */
     void setLoading(bool loading);
 
-    // 【新增】更新图片数据（生成完成后调用）
+    /**
+     * @brief 更新图片数据（生成完成后调用）
+     * @param img 生成的图片数据
+     * @param serverFileName 服务器文件名
+     */
     void updateImage(const QPixmap& img, const QString& serverFileName);
 
-    // 【新增】获取服务器文件名（给高清修复用）
+    /**
+     * @brief 获取服务器文件名（用于高清修复）
+     * @return QString 服务器文件名
+     */
     QString serverFileName() const { return m_serverFileName; }
 
-    // 【新增】往气泡里追加文字
+    /**
+     * @brief 往气泡里追加文字
+     * @param text 要追加的文本内容
+     */
     void appendText(const QString& text);
 
 signals:
-    // 【新增】右键菜单触发的信号
+    /**
+     * @brief 高清修复请求信号
+     * @param fileName 服务器文件名
+     * @param img 图片数据
+     */
     void upscaleRequested(const QString& fileName, const QPixmap& img);
 
 protected:
@@ -3854,6 +4147,17 @@ private:
 
 --- 文件开始: src\Ui\Components\HistoryGallery.cpp ---
 
+/**
+ * @file HistoryGallery.cpp
+ * @brief 生成历史画廊组件实现文件
+ * 
+ * 该文件实现了HistoryGallery类，提供生成历史图片的展示功能，支持查看大图、复制图片和复制路径。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "HistoryGallery.h"
 #include "../../Database/DatabaseManager.h"
 #include <QScrollArea>
@@ -3862,23 +4166,19 @@ private:
 #include <QScrollBar>
 #include <QPainter>
 #include <QDebug>
-#include <QMenu>          // 【新增】菜单
-#include <QClipboard>     // 【新增】剪贴板
-#include <QApplication>   // 【新增】获取全局剪贴板
+#include <QMenu>
+#include <QClipboard>
+#include <QApplication>
 
-// =========================================================
-// 内部类：单个图片卡片 (支持左键查看，右键复制)
-// =========================================================
 class GalleryItem : public QLabel
 {
 public:
-    QString imagePath; // 存储原图路径
-    std::function<void(QString)> onClick; // 点击回调
+    QString imagePath;
+    std::function<void(QString)> onClick;
 
     GalleryItem(const QString& path, int targetWidth, QWidget* parent = nullptr)
         : QLabel(parent), imagePath(path)
     {
-        // 1. 样式设置
         this->setStyleSheet(
             "QLabel { "
             "  background-color: black; "
@@ -3886,16 +4186,14 @@ public:
             "  border-radius: 6px; "
             "}"
             "QLabel:hover { "
-            "  border: 1px solid #19C37D; " // 悬停变绿
+            "  border: 1px solid #19C37D; "
             "  cursor: pointer; "
             "}"
             );
         this->setAlignment(Qt::AlignCenter);
 
-        // 2. 加载并缩放图片 (仅显示缩略图以节省内存)
         QPixmap pix(path);
         if (!pix.isNull()) {
-            // 宽度固定，高度按比例自动缩放，使用平滑算法
             QPixmap scaled = pix.scaledToWidth(targetWidth, Qt::SmoothTransformation);
             this->setPixmap(scaled);
             this->setFixedSize(scaled.size());
@@ -3907,13 +4205,10 @@ public:
     }
 
 protected:
-    // 捕获鼠标点击事件
     void mousePressEvent(QMouseEvent* event) override {
-        // --- 情况 A: 左键点击 -> 查看大图 ---
         if (event->button() == Qt::LeftButton) {
             if (onClick) onClick(imagePath);
         }
-        // --- 情况 B: 右键点击 -> 弹出菜单 ---
         else if (event->button() == Qt::RightButton) {
             showContextMenu(event->globalPosition().toPoint());
         }
@@ -3924,17 +4219,14 @@ protected:
 private:
     void showContextMenu(const QPoint& pos) {
         QMenu menu;
-        // 统一深色风格样式
         menu.setStyleSheet(
             "QMenu { background-color: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
             "QMenu::item { padding: 5px 20px; }"
             "QMenu::item:selected { background-color: #40414F; }"
             );
 
-        // 动作 1: 复制图片
         QAction* actCopy = menu.addAction("❐ 复制图片");
         QObject::connect(actCopy, &QAction::triggered, [this](){
-            // 【关键】从路径重新加载原图，而不是复制缩略图
             QPixmap originalPix(imagePath);
             if (!originalPix.isNull()) {
                 QClipboard *clipboard = QApplication::clipboard();
@@ -3943,7 +4235,6 @@ private:
             }
         });
 
-        // 动作 2: 复制文件路径 (可选，方便调试)
         QAction* actPath = menu.addAction("📂 复制路径");
         QObject::connect(actPath, &QAction::triggered, [this](){
             QClipboard *clipboard = QApplication::clipboard();
@@ -3954,10 +4245,6 @@ private:
     }
 };
 
-// =========================================================
-// HistoryGallery 主逻辑 (无需改动，保持原样即可)
-// =========================================================
-
 HistoryGallery::HistoryGallery(QWidget *parent) : QWidget(parent)
 {
     setupUi();
@@ -3965,7 +4252,6 @@ HistoryGallery::HistoryGallery(QWidget *parent) : QWidget(parent)
 
 void HistoryGallery::setupUi()
 {
-    // 1. 面板基础样式
     this->setFixedWidth(260);
     this->setStyleSheet("background-color: #202123; border-right: 1px solid #4D4D4F;");
 
@@ -3973,53 +4259,42 @@ void HistoryGallery::setupUi()
     mainLayout->setContentsMargins(0, 20, 0, 0);
     mainLayout->setSpacing(10);
 
-    // 2. 标题
     QLabel* title = new QLabel("🎨 生成历史", this);
     title->setStyleSheet("color: #ECECF1; font-weight: bold; font-size: 14px; padding-left: 15px; border: none;");
     mainLayout->addWidget(title);
 
-    // 3. 创建滚动区域
     m_scrollArea = new QScrollArea(this);
     m_scrollArea->setWidgetResizable(true);
-    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 水平永远关
-
-    // 【修改点 1】强制垂直滚动条总是显示（即使内容很少也能看到轨道）
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-
     m_scrollArea->setFrameShape(QFrame::NoFrame);
 
-    // 4. 优化滚轮速度
     m_scrollArea->verticalScrollBar()->setSingleStep(20);
 
-    // 5. 【修改点 2】高对比度样式，加宽滚动条
     m_scrollArea->setStyleSheet(
         "QScrollArea { "
         "   background: transparent; "
         "   border: none; "
         "}"
 
-        // --- 滚动条轨道 (槽) ---
         "QScrollBar:vertical { "
         "    border: none; "
-        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
-        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    background: #111111; "
+        "    width: 14px; "
         "    margin: 0px; "
         "}"
 
-        // --- 滚动滑块 (那个拖动的块) ---
         "QScrollBar::handle:vertical { "
-        "    background: #666666; "  // 明显的灰色
-        "    min-height: 30px; "     // 最小高度设大一点
-        "    border-radius: 7px; "   // 圆角
-        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "    background: #666666; "
+        "    min-height: 30px; "
+        "    border-radius: 7px; "
+        "    margin: 2px; "
         "}"
 
-        // --- 鼠标悬停变亮 ---
         "QScrollBar::handle:vertical:hover { "
-        "    background: #999999; "  // 悬停变白一点
+        "    background: #999999; "
         "}"
 
-        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
         "    height: 0px; "
         "}"
@@ -4028,15 +4303,13 @@ void HistoryGallery::setupUi()
         "}"
         );
 
-    // 6. 滚动容器 & 布局
     m_scrollContent = new QWidget();
     m_scrollContent->setStyleSheet("background: transparent;");
 
     m_scrollLayout = new QVBoxLayout(m_scrollContent);
-    // 这里的边距要注意：右边距可以稍微改小一点(比如5)，因为滚动条占了12px空间
     m_scrollLayout->setContentsMargins(15, 10, 5, 10);
     m_scrollLayout->setSpacing(15);
-    m_scrollLayout->setAlignment(Qt::AlignTop); // 必须置顶
+    m_scrollLayout->setAlignment(Qt::AlignTop);
 
     m_scrollArea->setWidget(m_scrollContent);
     mainLayout->addWidget(m_scrollArea);
@@ -4067,14 +4340,13 @@ void HistoryGallery::loadImages()
         return;
     }
 
-    int cardWidth = 220; // 适配宽度的缩略图尺寸
+    int cardWidth = 220;
 
     for (const QString& path : paths) {
         if (!QFileInfo::exists(path)) continue;
 
         GalleryItem* item = new GalleryItem(path, cardWidth, m_scrollContent);
 
-        // 绑定左键点击
         item->onClick = [this](QString p){
             emit imageClicked(p);
         };
@@ -4088,6 +4360,18 @@ void HistoryGallery::loadImages()
 
 --- 文件开始: src\Ui\Components\HistoryGallery.h ---
 
+/**
+ * @file HistoryGallery.h
+ * @brief 历史记录画廊组件头文件
+ * 
+ * 该文件定义了HistoryGallery类，用于显示所有生成的图片历史记录。
+ * 支持图片列表展示、滚动浏览和点击查看功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #pragma once
 
 #include <QWidget>
@@ -4096,35 +4380,71 @@ void HistoryGallery::loadImages()
 #include <QLabel>
 #include <QVector>
 
+/**
+ * @brief 历史记录画廊类
+ * 
+ * 继承自QWidget，提供历史图片的展示功能。
+ * 使用滚动区域支持大量图片的浏览，点击图片可触发查看事件。
+ */
 class HistoryGallery : public QWidget
 {
     Q_OBJECT
+
 public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
     explicit HistoryGallery(QWidget *parent = nullptr);
 
-    // 刷新显示图片
+    /**
+     * @brief 刷新显示图片
+     * 
+     * 从数据库加载所有生成的图片并显示在画廊中
+     */
     void loadImages();
 
 signals:
-    // 当点击某张图片时触发信号
+    /**
+     * @brief 图片点击信号
+     * @param imagePath 被点击的图片路径
+     */
     void imageClicked(const QString& imagePath);
 
 private:
+    /**
+     * @brief 初始化UI布局
+     */
     void setupUi();
-    // 清除当前的列表项
+
+    /**
+     * @brief 清除当前的列表项
+     * 
+     * 清空滚动区域中的所有图片项
+     */
     void clearLayout();
 
 private:
-    // 使用 ScrollArea 实现滚轮和长列表
-    QScrollArea* m_scrollArea;
-    QWidget* m_scrollContent;    // 滚动区域里的实体容器
-    QVBoxLayout* m_scrollLayout; // 垂直布局（单列）
+    QScrollArea* m_scrollArea; ///< 滚动区域组件
+    QWidget* m_scrollContent; ///< 滚动区域里的实体容器
+    QVBoxLayout* m_scrollLayout; ///< 垂直布局（单列）
 };
 
 
 --- 文件结束: src\Ui\Components\HistoryGallery.h ---
 
 --- 文件开始: src\Ui\Components\ImageViewer.cpp ---
+
+/**
+ * @file ImageViewer.cpp
+ * @brief 图片查看器组件实现文件
+ * 
+ * 该文件实现了ImageViewer类，提供图片查看功能，支持自适应显示、缩放和双击还原。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
 
 #include "ImageViewer.h"
 #include <QVBoxLayout>
@@ -4137,97 +4457,83 @@ ImageViewer::ImageViewer(const QPixmap& pixmap, QWidget* parent) : QDialog(paren
     this->setWindowTitle("查看图片 (滚轮缩放/左键拖拽/双击还原)");
     this->setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
 
-    // 1. 设置合理的初始窗口大小 (屏幕的 70%)
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize screenSize = screen->availableGeometry().size();
     this->resize(screenSize * 0.7);
 
-    // 2. 初始化 Graphics 体系
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
     m_scene = new QGraphicsScene(this);
     m_view = new QGraphicsView(m_scene, this);
 
-    // --- 关键设置 ---
-    // 开启抗锯齿，让图片缩放后依然平滑
     m_view->setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-    // 开启“抓手”模式：左键按住拖拽
     m_view->setDragMode(QGraphicsView::ScrollHandDrag);
-    // 隐藏滚动条 (我们用无限画布模式，通常不需要滚动条)
     m_view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    // 设置背景色为深灰
     m_view->setStyleSheet("background-color: #1e1e1e; border: none;");
-    // 缩放时的锚点：以鼠标为中心缩放，体验最好
     m_view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     m_view->setResizeAnchor(QGraphicsView::AnchorUnderMouse);
 
-    // 安装事件过滤器用于监听滚轮（因为 QGraphicsView 可能会吃掉滚轮事件）
     m_view->viewport()->installEventFilter(this);
 
-    // 添加图片
     m_item = new QGraphicsPixmapItem(pixmap);
     m_scene->addItem(m_item);
 
     layout->addWidget(m_view);
 
-    // 3. 初始状态：适应窗口
-    // 使用 Timer 延时 0ms 调用，确保 layout 完成后再计算大小
     QTimer::singleShot(0, this, [=](){
         fitImageToWindow();
     });
 }
 
-// 核心逻辑：自动适配
 void ImageViewer::fitImageToWindow() {
     if (!m_item || !m_view) return;
 
-    // Qt 神技：自动把 item 缩放到 view 的大小，并保持比例
     m_view->fitInView(m_item, Qt::KeepAspectRatio);
 
-    // 标记为"自适应模式"
     m_isFitWindow = true;
 }
 
-// 事件1: 窗口大小改变
 void ImageViewer::resizeEvent(QResizeEvent *event) {
     QDialog::resizeEvent(event);
 
-    // 如果用户还没手动缩放过，那么窗口变大，图片也跟着变大
     if (m_isFitWindow) {
         fitImageToWindow();
     }
 }
 
-// 事件2: 双击还原
 void ImageViewer::mouseDoubleClickEvent(QMouseEvent *event) {
     Q_UNUSED(event);
-    // 双击任意地方，恢复到“适应窗口”状态
     fitImageToWindow();
 }
 
-// 事件3: 滚轮缩放
+/**
+ * @brief 事件过滤器
+ * @param watched 监听的对象
+ * @param event 事件对象
+ * @return bool 是否处理了该事件
+ *
+ * 处理鼠标滚轮事件，实现图片缩放功能。
+ * 向上滚动放大，向下滚动缩小。
+ */
 bool ImageViewer::eventFilter(QObject *watched, QEvent *event) {
     if (watched == m_view->viewport() && event->type() == QEvent::Wheel) {
         QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
 
-        // 只要用户动了滚轮，就退出“自适应模式”
         m_isFitWindow = false;
 
-        // 计算缩放比例
         double angle = wheelEvent->angleDelta().y();
         double factor;
         if (angle > 0) {
-            factor = 1.15; // 放大 15%
+            factor = 1.15;
         } else {
-            factor = 1.0 / 1.15; // 缩小
+            factor = 1.0 / 1.15;
         }
 
-        // 执行缩放
         m_view->scale(factor, factor);
 
-        return true; // 事件已处理，不再向下传递
+        return true;
     }
     return QDialog::eventFilter(watched, event);
 }
@@ -4323,45 +4629,48 @@ private:
 
 --- 文件开始: src\Ui\Components\InputPanel.cpp ---
 
+/**
+ * @file InputPanel.cpp
+ * @brief 输入面板组件实现文件
+ * 
+ * 该文件实现了InputPanel类，提供提示词输入、参考图上传、画幅比例选择和工作流选择等功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "InputPanel.h"
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QActionGroup>
-#include <QScrollBar> // 引入滚动条头文件以便美化
+#include <QScrollBar>
 #include <QKeyEvent>
 
 InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     m_currentResolution = QSize(1024, 1024);
 
-    // 设置底部面板的背景和边框
     this->setStyleSheet("InputPanel { background-color: #343541; border-top: 1px solid #5D5D67; }");
 
-    // 设置一个合理的初始高度策略
     this->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
-    // 对齐方式设为 Bottom，这样当输入框变高时，按钮保持在底部对齐（可选，看你喜好）
     layout->setAlignment(Qt::AlignBottom);
     layout->setContentsMargins(20, 20, 20, 20);
     layout->setSpacing(15);
 
-    // 1. [新增] 参考图按钮 (使用 QToolButton)
     m_btnRef = new QToolButton(this);
-    m_btnRef->setText("📎"); // 暂时用文字代替图标，以后换 QIcon
+    m_btnRef->setText("📎");
     m_btnRef->setFixedSize(40, 40);
-    // 样式：正常是白色，禁用是灰色
     m_btnRef->setStyleSheet(
         "QToolButton { background-color: transparent; border: 1px solid #555; border-radius: 20px; color: white; font-size: 20px; }"
         "QToolButton:hover { background-color: #444; }"
-        "QToolButton:disabled { color: #555; border-color: #333; }" // 禁用样式
+        "QToolButton:disabled { color: #555; border-color: #333; }"
         );
     layout->addWidget(m_btnRef);
 
-    // =================================================
-    // 【新增】反推按钮 (魔法棒)
-    // =================================================
     m_btnInterrogate = new QToolButton(this);
-    m_btnInterrogate->setText("🪄"); // 魔法棒图标
+    m_btnInterrogate->setText("🪄");
     m_btnInterrogate->setFixedSize(40, 40);
     m_btnInterrogate->setToolTip("上传图片反推提示词");
     m_btnInterrogate->setStyleSheet(
@@ -4369,27 +4678,20 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
         "QToolButton:hover { background-color: #444; }"
         );
     layout->addWidget(m_btnInterrogate);
-    // =================================================
 
-
-    // =========================================================
-    // 【新增】2. 画幅比例按钮
-    // =========================================================
     m_btnRatio = new QToolButton(this);
-    m_btnRatio->setText("1:1"); // 默认文字
-    m_btnRatio->setFixedSize(60, 40); // 稍微宽一点放文字
-    m_btnRatio->setPopupMode(QToolButton::InstantPopup); // 点击直接弹菜单
+    m_btnRatio->setText("1:1");
+    m_btnRatio->setFixedSize(60, 40);
+    m_btnRatio->setPopupMode(QToolButton::InstantPopup);
     m_btnRatio->setStyleSheet(
         "QToolButton { background-color: transparent; border: 1px solid #555; border-radius: 4px; color: white; font-weight: bold; }"
         "QToolButton:hover { background-color: #444; }"
-        "QToolButton::menu-indicator { image: none; }" // 隐藏自带的小三角
+        "QToolButton::menu-indicator { image: none; }"
         );
 
     setupRatioMenu();
     layout->addWidget(m_btnRatio);
-    // =========================================================
 
-    // 2. 工作流按钮
     m_btnWorkflow = new QPushButton("🎨 选择工作流", this);
     m_btnWorkflow->setFixedSize(120, 40);
     m_btnWorkflow->setStyleSheet(
@@ -4401,38 +4703,32 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     m_inputEdit = new QPlainTextEdit(this);
     m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
 
-    // 设置初始样式
     m_inputEdit->setStyleSheet(
         "QPlainTextEdit { "
         "   background-color: #40414F; "
         "   color: white; "
         "   border: 1px solid #555; "
         "   border-radius: 4px; "
-        "   padding: 8px; " // 内边距大一点更好看
+        "   padding: 8px; "
         "   font-size: 14px; "
         "}"
         "QPlainTextEdit:focus { border-color: #19C37D; }"
 
-        // 隐藏/美化滚动条 (和之前 HistoryGallery 类似)
         "QScrollBar:vertical { width: 8px; background: transparent; }"
         "QScrollBar::handle:vertical { background: #666; border-radius: 4px; }"
         );
 
-    // 初始高度设为一行的高度 (约40px)
     m_inputEdit->setFixedHeight(40);
     m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // 安装事件过滤器 (用于拦截回车)
     m_inputEdit->installEventFilter(this);
 
-    // 监听文字变化，自动调整高度
     connect(m_inputEdit, &QPlainTextEdit::textChanged, this, &InputPanel::adjustInputHeight);
 
     layout->addWidget(m_inputEdit);
 
-    // 4. 生成按钮
     m_btnGenerate = new QPushButton("生成", this);
-    m_btnGenerate->setFixedSize(80, 40); // 按钮高度固定
+    m_btnGenerate->setFixedSize(80, 40);
     m_btnGenerate->setStyleSheet(
         "QPushButton { background-color: #19C37D; color: white; border-radius: 4px; font-weight: bold; }"
         "QPushButton:hover { background-color: #1AD48A; }"
@@ -4440,63 +4736,45 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
         );
     layout->addWidget(m_btnGenerate);
 
-    // 连接信号
     connect(m_btnGenerate, &QPushButton::clicked, this, &InputPanel::onGenerateClicked);
-
 }
-
-
 
 bool InputPanel::eventFilter(QObject *obj, QEvent *e)
 {
     if (obj == m_inputEdit && e->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(e);
 
-        // 如果按下的是 Enter (Key_Return)
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
-            // 检查是否按下了 Shift
             if (keyEvent->modifiers() & Qt::ShiftModifier) {
-                // Shift + Enter -> 允许换行 (默认行为，不做处理，返回 false 让控件自己处理)
                 return false;
             } else {
-                // 单独按 Enter -> 发送消息
                 onGenerateClicked();
-                return true; // 事件已处理，不再传递给控件(防止产生换行)
+                return true;
             }
         }
     }
     return QWidget::eventFilter(obj, e);
 }
 
-// 【新增】自动调整高度逻辑
 void InputPanel::adjustInputHeight()
 {
     QTextDocument *doc = m_inputEdit->document();
-    // 调整文档布局宽度以匹配控件宽度 (防止换行计算错误)
     doc->setTextWidth(m_inputEdit->viewport()->width());
 
-    // 计算内容总高度
     int contentHeight = doc->size().height();
 
-    // 加上上下的 padding (CSS里设置了 padding: 8px，上下加起来约16，微调一下)
     int margins = 16;
     int totalHeight = contentHeight + margins;
 
-    // 设定限制
-    int minHeight = 40;  // 1行的高度
-    int maxHeight = 120; // 约 4-5 行的高度
+    int minHeight = 40;
+    int maxHeight = 120;
 
-    // 限制在 min 和 max 之间
     int finalHeight = qBound(minHeight, totalHeight, maxHeight);
 
     if (m_inputEdit->height() != finalHeight) {
         m_inputEdit->setFixedHeight(finalHeight);
-
-        // 如果你的 InputPanel 之前设置了 fixedHeight，这里需要让父控件也 updateGeometry
-        // 因为我们去掉了 setFixedHeight，这里会自动触发布局重算
     }
 
-    // 只有当内容超过最大高度时，才显示垂直滚动条
     if (totalHeight > maxHeight) {
         m_inputEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     } else {
@@ -4505,20 +4783,19 @@ void InputPanel::adjustInputHeight()
 }
 
 void InputPanel::onGenerateClicked() {
-    // 获取纯文本
     QString prompt = m_inputEdit->toPlainText().trimmed();
     if (!prompt.isEmpty()) {
         emit generateClicked(prompt);
-        // 清空并重置高度
         m_inputEdit->clear();
         adjustInputHeight();
     }
 }
 
-
-
-
-
+/**
+ * @brief 设置画幅比例菜单
+ *
+ * 创建画幅比例选择菜单，包含1:1、3:4、4:3、9:16、16:9等常用比例。
+ */
 void InputPanel::setupRatioMenu()
 {
     m_ratioMenu = new QMenu(this);
@@ -4526,7 +4803,6 @@ void InputPanel::setupRatioMenu()
 
     QActionGroup* group = new QActionGroup(this);
 
-    // 定义 SDXL 甜点分辨率 (总像素约 1024*1024)
     struct Ratio { QString name; int w; int h; };
     QList<Ratio> ratios = {
         {"1:1 (方图)", 1024, 1024},
@@ -4538,7 +4814,7 @@ void InputPanel::setupRatioMenu()
 
     for (const auto& r : ratios) {
         QAction* action = m_ratioMenu->addAction(r.name);
-        action->setData(QSize(r.w, r.h)); // 把宽高存入 data
+        action->setData(QSize(r.w, r.h));
         action->setCheckable(true);
         group->addAction(action);
 
@@ -4552,40 +4828,44 @@ void InputPanel::setupRatioMenu()
     m_btnRatio->setMenu(m_ratioMenu);
 }
 
+/**
+ * @brief 画幅比例选择槽函数
+ * @param action 选中的菜单项
+ *
+ * 更新当前画幅比例并发出分辨率变化信号。
+ */
 void InputPanel::onRatioSelected(QAction* action)
 {
     QSize size = action->data().toSize();
     m_currentResolution = size;
 
-    // 更新按钮文字，取冒号前的部分 (例如 "16:9")
     QString text = action->text().split(" ").first();
     m_btnRatio->setText(text);
 
     emit resolutionChanged(size.width(), size.height());
 }
 
+/**
+ * @brief 更新面板状态
+ * @param type 工作流类型
+ *
+ * 根据工作流类型启用或禁用相关按钮。
+ * 文生图模式禁用参考图和反推按钮，图生图模式禁用画幅比例选择。
+ */
 void InputPanel::updateState(WorkflowType type) {
     if (type == WorkflowType::TextToImage) {
-        // --- 文生图模式 ---
-        // 1. 禁用参考图上传（因为纯文生图不需要）
         m_btnRef->setEnabled(false);
 
-        // 2. 启用画幅比例选择
         m_btnRatio->setEnabled(true);
 
-        // 3. 【新增】禁用反推按钮（因为没有图片可以反推）
         if (m_btnInterrogate) m_btnInterrogate->setEnabled(false);
 
     } else {
-        // --- 图生图/其他模式 ---
-        // 1. 启用参考图上传
         m_btnRef->setEnabled(true);
 
-        // 2. 禁用画幅比例（通常跟随原图尺寸）
         m_btnRatio->setEnabled(false);
         m_btnRatio->setText("Auto");
 
-        // 3. 【新增】启用反推按钮
         if (m_btnInterrogate) m_btnInterrogate->setEnabled(true);
     }
 }
@@ -4594,9 +4874,6 @@ QSize InputPanel::currentResolution() const {
     return m_currentResolution;
 }
 
-
-
-// setLocked 函数也要修改一下，因为控件类型变了
 void InputPanel::setLocked(bool locked)
 {
     bool enabled = !locked;
@@ -4606,7 +4883,6 @@ void InputPanel::setLocked(bool locked)
     m_btnRatio->setEnabled(enabled);
     m_btnWorkflow->setEnabled(enabled);
 
-    // QPlainTextEdit 也有 setEnabled，或者用 setReadOnly
     m_inputEdit->setEnabled(enabled);
     if (locked) {
         m_inputEdit->setPlaceholderText("生成中，请稍候...");
@@ -4617,12 +4893,14 @@ void InputPanel::setLocked(bool locked)
     m_btnGenerate->setEnabled(enabled);
 }
 
+/**
+ * @brief 设置连接状态
+ * @param isConnected 是否已连接
+ *
+ * 根据服务器连接状态更新UI显示，未连接时禁用生成功能并显示提示信息。
+ */
 void InputPanel::setConnectionStatus(bool isConnected)
 {
-    // 1. 复用 setLocked 的逻辑来 禁用/启用 按钮
-    // 如果 isConnected 为 false (未连接)，则 locked 为 true (锁定)
-    // 但这里我们需要手动处理，因为 setLocked 会改文字，所以我们手动设 enabled
-
     bool enable = isConnected;
 
     m_btnGenerate->setEnabled(enable);
@@ -4631,10 +4909,8 @@ void InputPanel::setConnectionStatus(bool isConnected)
     m_inputEdit->setEnabled(enable);
 
     if (m_btnInterrogate) m_btnInterrogate->setEnabled(enable);
-    // 注意：比例按钮在文生图模式下才启用，这里简单处理， updateState 会自动修正
     if (m_btnRatio) m_btnRatio->setEnabled(enable);
 
-    // 2. 【关键】设置专属的提示文字
     if (isConnected) {
         m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
         m_btnGenerate->setText("生成");
@@ -4664,7 +4940,7 @@ void InputPanel::setConnectionStatus(bool isConnected)
 #pragma once
 #include <QWidget>
 #include <QPushButton>
-#include <QToolButton> // 使用 ToolButton 做纯图标按钮更合适
+#include <QToolButton>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPlainTextEdit>
@@ -4676,8 +4952,10 @@ void InputPanel::setConnectionStatus(bool isConnected)
  * 继承自QWidget，提供工作流选择、参考图上传和文本输入功能。
  * 包含按钮组件、输入框和状态管理功能。
  */
-class InputPanel : public QWidget {
+class InputPanel : public QWidget
+{
     Q_OBJECT
+
 public:
     /**
      * @brief 构造函数
@@ -4690,7 +4968,7 @@ public:
      * @return QPushButton* 工作流按钮指针
      */
     QPushButton* getWorkflowBtn() const { return m_btnWorkflow; }
-    
+
     /**
      * @brief 获取参考图按钮
      * @return QToolButton* 参考图按钮指针
@@ -4705,7 +4983,7 @@ public:
 
     /**
      * @brief 获取输入框
-     * @return QLineEdit* 输入框指针
+     * @return QPlainTextEdit* 输入框指针
      */
     QPlainTextEdit* getInputEdit() const { return m_inputEdit; }
 
@@ -4715,16 +4993,30 @@ public:
      */
     void updateState(WorkflowType type);
 
-    // 【新增】获取当前选择的分辨率
+    /**
+     * @brief 获取当前选择的分辨率
+     * @return QSize 当前分辨率
+     */
     QSize currentResolution() const;
 
-    // 【新增】获取反推按钮
+    /**
+     * @brief 获取反推按钮
+     * @return QToolButton* 反推按钮指针
+     */
     QToolButton* getInterrogateBtn() const { return m_btnInterrogate; }
 
-    // 【新增】锁定/解锁面板所有控件
+    /**
+     * @brief 锁定/解锁面板所有控件
+     * @param locked 是否锁定
+     */
     void setLocked(bool locked);
 
-    // 【新增】设置连接状态 (专门用于网络断开时的锁定)
+    /**
+     * @brief 设置连接状态
+     * @param isConnected 是否已连接
+     * 
+     * 专门用于网络断开时的锁定
+     */
     void setConnectionStatus(bool isConnected);
 
 signals:
@@ -4734,11 +5026,20 @@ signals:
      */
     void generateClicked(const QString& prompt);
 
-    // 【新增】比例改变信号（可选，如果MainWindow需要立即知道）
+    /**
+     * @brief 分辨率改变信号
+     * @param w 宽度
+     * @param h 高度
+     */
     void resolutionChanged(int w, int h);
 
 protected:
-    // 【新增】重写事件过滤器，处理回车键
+    /**
+     * @brief 重写事件过滤器，处理回车键
+     * @param obj 被监视的对象
+     * @param e 事件对象
+     * @return bool 是否处理了该事件
+     */
     bool eventFilter(QObject *obj, QEvent *e) override;
 
 private slots:
@@ -4747,34 +5048,49 @@ private slots:
      */
     void onGenerateClicked();
 
-    // 【新增】处理比例选择
+    /**
+     * @brief 处理比例选择
+     * @param action 被选中的动作
+     */
     void onRatioSelected(QAction* action);
 
-    // 【新增】文本变化时调整高度
+    /**
+     * @brief 文本变化时调整高度
+     */
     void adjustInputHeight();
 
 private:
-    void setupRatioMenu(); // 初始化菜单
+    /**
+     * @brief 初始化菜单
+     */
+    void setupRatioMenu();
 
 private:
-    QPushButton* m_btnWorkflow;
-    QToolButton* m_btnRef;
-
-    // 【新增】比例按钮
-    QToolButton* m_btnRatio;
-    QMenu* m_ratioMenu;
-    QSize m_currentResolution; // 当前选中的分辨率
-
-    QPlainTextEdit* m_inputEdit;
-    QPushButton* m_btnGenerate;
-
-    QToolButton* m_btnInterrogate; // 【新增】
+    QPushButton* m_btnWorkflow; ///< 工作流按钮
+    QToolButton* m_btnRef; ///< 参考图按钮
+    QToolButton* m_btnRatio; ///< 比例按钮
+    QMenu* m_ratioMenu; ///< 比例菜单
+    QSize m_currentResolution; ///< 当前选中的分辨率
+    QPlainTextEdit* m_inputEdit; ///< 输入框
+    QPushButton* m_btnGenerate; ///< 生成按钮
+    QToolButton* m_btnInterrogate; ///< 反推按钮
 };
 
 
 --- 文件结束: src\Ui\Components\InputPanel.h ---
 
 --- 文件开始: src\Ui\Components\ReferencePopup.cpp ---
+
+/**
+ * @file ReferencePopup.cpp
+ * @brief 参考图弹窗组件实现文件
+ * 
+ * 该文件实现了ReferencePopup类，提供参考图上传和预览功能，支持拖拽和文件选择。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
 
 #include "ReferencePopup.h"
 #include <QVBoxLayout>
@@ -4790,22 +5106,22 @@ private:
 #include <QStandardPaths>
 #include <QFileInfo>
 
+/**
+ * @brief 构造函数
+ * @param parent 父窗口指针
+ *
+ * 初始化参考图弹窗，设置窗口属性为无边框、透明背景、置顶显示。
+ */
 ReferencePopup::ReferencePopup(QWidget *parent) : QWidget(parent) {
-    // 【重要】：允许拖拽
     this->setAcceptDrops(true);
 
-    // 设置窗口属性
-    // 使用 Qt::Tool 而不是 Popup，防止点击外部时窗口自动关闭
-    // 同时配合 Qt::FramelessWindowHint 去掉边框
     this->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     this->setAttribute(Qt::WA_TranslucentBackground);
     
-    // 设置焦点策略，允许窗口获取焦点
     this->setFocusPolicy(Qt::StrongFocus);
 
-    this->setFixedSize(320, 240); //稍微大一点
+    this->setFixedSize(320, 240);
 
-    // 初始化成员变量，确保能记住已添加的参考图
     m_currentImage = QPixmap();
     m_currentPath.clear();
 
@@ -4816,31 +5132,25 @@ void ReferencePopup::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
 
-    // 1. 主容器（深色圆角背景）
     QWidget* container = new QWidget(this);
     container->setStyleSheet(
         "QWidget { background-color: #2D2D2D; border: 1px solid #444; border-radius: 8px; }"
         );
-    // 给 container 加阴影会更好看（这里省略，保持简洁）
 
     QVBoxLayout* containerLayout = new QVBoxLayout(container);
     containerLayout->setContentsMargins(15, 15, 15, 15);
 
-    // 2. 标题栏
     QLabel* title = new QLabel("参考图 (Reference)", container);
     title->setStyleSheet("color: #ECECF1; font-weight: bold; border: none;");
     containerLayout->addWidget(title);
 
-    // 3. 堆栈布局 (核心：切换空状态和预览状态)
     m_stackLayout = new QStackedLayout();
 
-    // --- 页面 A: 空状态 (拖拽区 + 按钮) ---
     m_pageEmpty = new QWidget(container);
     m_pageEmpty->setStyleSheet("background: transparent; border: none;");
     QVBoxLayout* emptyLayout = new QVBoxLayout(m_pageEmpty);
     emptyLayout->setContentsMargins(0, 10, 0, 0);
 
-    // 虚线框 Label
     QLabel* lblDropZone = new QLabel("拖拽图片到此处\n\n或", m_pageEmpty);
     lblDropZone->setAlignment(Qt::AlignCenter);
     lblDropZone->setStyleSheet(
@@ -4852,7 +5162,6 @@ void ReferencePopup::setupUi() {
         "}"
         );
 
-    // 上传按钮
     QPushButton* btnUpload = new QPushButton("选择本地文件", m_pageEmpty);
     btnUpload->setCursor(Qt::PointingHandCursor);
     btnUpload->setFixedHeight(36);
@@ -4872,19 +5181,16 @@ void ReferencePopup::setupUi() {
     emptyLayout->addWidget(lblDropZone);
     emptyLayout->addWidget(btnUpload);
 
-    // --- 页面 B: 预览状态 (图片 + 删除按钮) ---
     m_pagePreview = new QWidget(container);
     m_pagePreview->setStyleSheet("background: transparent; border: none;");
     QVBoxLayout* previewLayout = new QVBoxLayout(m_pagePreview);
     previewLayout->setContentsMargins(0, 10, 0, 0);
 
-    // 图片预览区
     m_lblPreview = new QLabel(m_pagePreview);
     m_lblPreview->setAlignment(Qt::AlignCenter);
     m_lblPreview->setStyleSheet("border: 1px solid #444; border-radius: 4px; background-color: #000;");
     m_lblPreview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    // 删除按钮
     QPushButton* btnRemove = new QPushButton("🗑 移除参考图", m_pagePreview);
     btnRemove->setCursor(Qt::PointingHandCursor);
     btnRemove->setFixedHeight(36);
@@ -4893,59 +5199,47 @@ void ReferencePopup::setupUi() {
         "QPushButton:hover { background-color: #991b1b; }"
         );
     connect(btnRemove, &QPushButton::clicked, this, [=](){
-        m_currentImage = QPixmap(); // 清空
+        m_currentImage = QPixmap();
         m_currentPath.clear();
-        updateUiState(); // 回到空状态
+        updateUiState();
     });
 
     previewLayout->addWidget(m_lblPreview);
     previewLayout->addWidget(btnRemove);
 
-    // 将两个页面加入堆栈
     m_stackLayout->addWidget(m_pageEmpty);
     m_stackLayout->addWidget(m_pagePreview);
 
-    // 把堆栈加入主布局
     containerLayout->addLayout(m_stackLayout);
     mainLayout->addWidget(container);
 
-    // 初始状态
     updateUiState();
 }
 
 void ReferencePopup::popup(const QPoint& pos) {
-    // 水平居中，垂直在按钮上方
     int x = pos.x() - (this->width() / 2);
     int y = pos.y() - this->height() - 10;
     this->move(x, y);
     this->show();
-    this->raise(); // 确保在最上层
-    this->setFocus(); // 获取焦点，用于处理焦点失去事件
+    this->raise();
+    this->setFocus();
 }
 
 void ReferencePopup::hide() {
     QWidget::hide();
-    // 清除焦点，避免干扰其他窗口
     this->clearFocus();
 }
 
-// ---------------------------------------------------------
-// 拖拽核心逻辑
-// ---------------------------------------------------------
-
 void ReferencePopup::dragEnterEvent(QDragEnterEvent *event) {
-    // 1. 检查是否有文件
     if (event->mimeData()->hasUrls()) {
         QList<QUrl> urls = event->mimeData()->urls();
         if (urls.isEmpty()) return;
 
-        // 2. 检查后缀名是否是图片
         QString filePath = urls.first().toLocalFile();
         QFileInfo info(filePath);
         QString suffix = info.suffix().toLower();
 
         if (suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "bmp" || suffix == "webp") {
-            // 是图片，允许拖入
             event->acceptProposedAction();
         }
     }
@@ -4960,10 +5254,6 @@ void ReferencePopup::dropEvent(QDropEvent *event) {
     }
 }
 
-// ---------------------------------------------------------
-// 图片加载与渲染
-// ---------------------------------------------------------
-
 void ReferencePopup::loadImage(const QString& path) {
     QPixmap img(path);
     if (img.isNull()) return;
@@ -4971,25 +5261,26 @@ void ReferencePopup::loadImage(const QString& path) {
     m_currentPath = path;
     m_currentImage = img;
 
-    // 为了美观，我们需要根据 Label 的大小对图片进行缩放（保持比例）
-    // 注意：这里简单处理，实际渲染可能需要 resizeEvent 配合
     QSize targetSize = m_lblPreview->size();
-    if (targetSize.isEmpty()) targetSize = QSize(280, 150); // 兜底尺寸
+    if (targetSize.isEmpty()) targetSize = QSize(280, 150);
 
-    // 缩放图片
     QPixmap scaled = img.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     m_lblPreview->setPixmap(scaled);
 
     updateUiState();
 }
 
+/**
+ * @brief 更新UI状态
+ *
+ * 根据当前是否有图片，切换显示空状态页面或预览页面。
+ */
 void ReferencePopup::updateUiState() {
     if (m_currentImage.isNull()) {
         m_stackLayout->setCurrentWidget(m_pageEmpty);
     } else {
         m_stackLayout->setCurrentWidget(m_pagePreview);
 
-        // 如果是在预览页，这里也可以再次触发一下缩放，防止 label 大小未更新
         if (!m_currentImage.isNull()) {
             QSize s = QSize(280, 150);
             m_lblPreview->setPixmap(m_currentImage.scaled(s, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -5079,9 +5370,6 @@ protected:
      */
     void dropEvent(QDropEvent *event) override;
 
-    // 焦点失去时隐藏（模拟 Popup 行为）
-    // void focusOutEvent(QFocusEvent *event) override;
-
 private:
     /**
      * @brief 初始化UI布局
@@ -5117,6 +5405,17 @@ private:
 
 --- 文件开始: src\Ui\Components\SessionItem.cpp ---
 
+/**
+ * @file SessionItem.cpp
+ * @brief 会话项组件实现文件
+ * 
+ * 该文件实现了SessionItem类，提供会话列表项的UI显示和交互功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "SessionItem.h"
 #include <QApplication>
 #include <QClipboard>
@@ -5125,41 +5424,45 @@ private:
 #include <QFontMetrics>
 #include <QResizeEvent>
 
+/**
+ * @brief 构造函数
+ * @param id 会话ID
+ * @param title 会话标题
+ * @param parent 父窗口指针
+ */
 SessionItem::SessionItem(int id, const QString& title, QWidget *parent)
     : QWidget(parent), m_id(id), m_fullTitle(title)
 {
     this->setAttribute(Qt::WA_StyledBackground, true);
     this->setFixedHeight(50);
-    // 默认透明
     this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
     setupUi();
 }
 
+/**
+ * @brief 初始化UI布局
+ */
 void SessionItem::setupUi()
 {
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->setContentsMargins(10, 0, 5, 0);
     layout->setSpacing(0);
 
-    // 1. 标题
     m_lblTitle = new QLabel(this);
     m_lblTitle->setStyleSheet("color: #ECECF1; font-size: 13px; background: transparent;border: none;");
     m_lblTitle->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     m_lblTitle->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
-    // 2. 菜单按钮
     m_btnOption = new QToolButton(this);
     m_btnOption->setText("···");
     m_btnOption->setFixedSize(30, 30);
     m_btnOption->setCursor(Qt::PointingHandCursor);
 
-    // 【核心修复】：加上 border: none; 消除那个灰线
-    // 默认状态：完全透明，连边框都不要
     m_btnOption->setStyleSheet(
         "QToolButton { "
-        "    border: none; "             // <--- 这一行去掉灰线
-        "    background: transparent; "  // <--- 背景透明
-        "    color: transparent; "       // <--- 文字透明(看起来像隐藏了)
+        "    border: none; "
+        "    background: transparent; "
+        "    color: transparent; "
         "}"
         );
 
@@ -5171,36 +5474,40 @@ void SessionItem::setupUi()
     updateTitleText();
 }
 
+/**
+ * @brief 鼠标进入事件处理
+ * @param event 鼠标进入事件
+ */
 void SessionItem::enterEvent(QEnterEvent *event)
 {
     if (!m_isSelected) {
         this->setStyleSheet("SessionItem { background-color: #2A2B32; border-radius: 6px; }");
     }
 
-    // 悬浮时：文字变白，背景变深灰
-    // 同样记得带上 border: none，否则悬浮时线又出来了
     m_btnOption->setStyleSheet(
         "QToolButton { "
         "    color: #ECECF1; "
         "    background-color: #40414F; "
         "    border-radius: 4px; "
-        "    border: none; "          // <--- 保持无边框
+        "    border: none; "
         "    font-weight: bold; "
         "}"
-        "QToolButton:hover { color: white; background-color: #50515F; }" // 按钮自己的hover效果
+        "QToolButton:hover { color: white; background-color: #50515F; }"
         );
 
     QWidget::enterEvent(event);
 }
 
+/**
+ * @brief 鼠标离开事件处理
+ * @param event 鼠标离开事件
+ */
 void SessionItem::leaveEvent(QEvent *event)
 {
     if (!m_isSelected) {
         this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
     }
 
-    // 离开时：变回完全透明（占位但不显示）
-    // 依然要带上 border: none
     m_btnOption->setStyleSheet(
         "QToolButton { "
         "    border: none; "
@@ -5212,42 +5519,57 @@ void SessionItem::leaveEvent(QEvent *event)
     QWidget::leaveEvent(event);
 }
 
+/**
+ * @brief 鼠标按下事件处理
+ * @param event 鼠标按下事件
+ */
 void SessionItem::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        // 发送 this 指针，方便 SessionList 直接操作
         emit itemClicked(this);
     }
     QWidget::mousePressEvent(event);
 }
 
+/**
+ * @brief 设置选中状态
+ * @param selected 是否选中
+ */
 void SessionItem::setSelected(bool selected)
 {
     m_isSelected = selected;
     if (selected) {
-        // 选中态
         this->setStyleSheet("SessionItem { background-color: #343541; border-radius: 6px; border: 1px solid #565869; }");
     } else {
-        // 非选中态
         this->setStyleSheet("SessionItem { background-color: transparent; border-radius: 6px; border: none; }");
     }
 }
 
+/**
+ * @brief 更新标题
+ * @param newTitle 新标题
+ */
 void SessionItem::setTitle(const QString& newTitle)
 {
     m_fullTitle = newTitle;
     updateTitleText();
 }
 
+/**
+ * @brief 窗口大小改变事件处理
+ * @param event 大小改变事件
+ */
 void SessionItem::resizeEvent(QResizeEvent *event)
 {
     updateTitleText();
     QWidget::resizeEvent(event);
 }
 
+/**
+ * @brief 更新标题文本显示
+ */
 void SessionItem::updateTitleText()
 {
-    // 计算宽度：总宽 - 按钮宽 - 左右边距余量
     int availableWidth = this->width() - m_btnOption->width() - 20;
     if (availableWidth <= 0) return;
 
@@ -5255,62 +5577,52 @@ void SessionItem::updateTitleText()
     QString elidedText = metrics.elidedText(m_fullTitle, Qt::ElideRight, availableWidth);
     m_lblTitle->setText(elidedText);
 
-    // 这样无论鼠标什么时候移上来，Tooltip 早就准备好了
     if (elidedText != m_fullTitle) {
         this->setToolTip(m_fullTitle);
     } else {
-        this->setToolTip(""); // 没截断就清空，防止显示多余的提示
+        this->setToolTip("");
     }
 }
 
-// 弹出右键菜单
+/**
+ * @brief 显示右键菜单
+ */
 void SessionItem::showMenu()
 {
     QMenu menu(this);
-    // 设置 QMenu 的样式，让它匹配黑暗主题
     menu.setStyleSheet("QMenu { background-color: #2D2D2D; color: white; border: 1px solid #555; border-radius: 8px }"
                        "QMenu::item:selected { background-color: #40414F; }");
 
-    // 1. 添加重命名动作
     QAction* actRename = menu.addAction("✎ 重命名");
     connect(actRename, &QAction::triggered, this, [=](){
         bool ok;
-        // 弹出输入框
         QString text = QInputDialog::getText(this, "重命名会话",
                                              "请输入新名称:", QLineEdit::Normal,
                                              m_fullTitle, &ok);
-        // 如果用户点了OK且输入不为空
         if (ok && !text.isEmpty()) {
-            setTitle(text); // 更新 UI
-            emit itemRenamed(m_id, text); // 通知外部/数据库
+            setTitle(text);
+            emit itemRenamed(m_id, text);
         }
     });
 
-    // 2. 添加复制动作
     QAction* actCopy = menu.addAction("❐ 复制标题");
     connect(actCopy, &QAction::triggered, this, [=](){
-        // 获取系统剪贴板并写入
         QClipboard *clipboard = QApplication::clipboard();
         clipboard->setText(m_fullTitle);
     });
 
-    // 加一条横线分隔
     menu.addSeparator();
 
-    // 3. 添加删除动作
     QAction* actDelete = menu.addAction("🗑 删除会话");
     connect(actDelete, &QAction::triggered, this, [=](){
-        // 删除是危险操作，必须二次确认
         QMessageBox::StandardButton reply;
         reply = QMessageBox::question(this, "确认删除", "确定要删除这个会话吗？\n此操作无法撤销。",
                                       QMessageBox::Yes|QMessageBox::No);
         if (reply == QMessageBox::Yes) {
-            emit itemDeleted(m_id); // 发送删除信号
+            emit itemDeleted(m_id);
         }
     });
 
-    // 在按钮的正下方弹出菜单
-    // mapToGlobal: 把按钮相对于窗口的坐标(0, height)转换成屏幕绝对坐标
     menu.exec(m_btnOption->mapToGlobal(QPoint(0, m_btnOption->height())));
 }
 
@@ -5455,12 +5767,23 @@ private:
 
 --- 文件开始: src\Ui\Components\SessionList.cpp ---
 
+/**
+ * @file SessionList.cpp
+ * @brief 会话列表组件实现文件
+ * 
+ * 该文件实现了SessionList类，提供会话列表管理功能，包括会话的添加、选择、重命名和删除。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "SessionList.h"
 #include "SessionItem.h"
 #include <QPushButton>
 #include <QLabel>
 #include <QScrollArea>
-#include <QScrollBar> // 用于美化滚动条
+#include <QScrollBar>
 
 SessionList::SessionList(QWidget *parent)
     : QWidget(parent)
@@ -5471,20 +5794,16 @@ SessionList::SessionList(QWidget *parent)
 
 void SessionList::setupUi()
 {
-    // 1. 设置侧边栏基本属性
     this->setFixedWidth(260);
     this->setStyleSheet("background-color: #202123; border-right: 1px solid #4D4D4F;");
 
-    // 2. 最外层布局 (垂直)
     QVBoxLayout* rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 20, 0, 0); // 顶部留白，左右下贴边
+    rootLayout->setContentsMargins(0, 20, 0, 0);
     rootLayout->setSpacing(10);
 
-    // 3. 固定在顶部的“新建会话”按钮
-    // 为了让按钮左右有间距，我们给它包一层容器，或者直接设置 margin
     QWidget* topContainer = new QWidget(this);
     QVBoxLayout* topLayout = new QVBoxLayout(topContainer);
-    topLayout->setContentsMargins(10, 0, 10, 0); // 按钮左右留白
+    topLayout->setContentsMargins(10, 0, 10, 0);
 
     m_btnNew = new QPushButton("+ 新建会话", this);
     m_btnNew->setFixedHeight(45);
@@ -5505,41 +5824,35 @@ void SessionList::setupUi()
     topLayout->addWidget(m_btnNew);
     rootLayout->addWidget(topContainer);
 
-    // 4. 创建滚动区域 (QScrollArea)
     QScrollArea* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true); // 关键：让内部容器宽度自适应 ScrollArea
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 只要垂直滚动，不要水平
-    scrollArea->setFrameShape(QFrame::NoFrame); // 去掉 ScrollArea 自带的边框
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setFrameShape(QFrame::NoFrame);
 
-    // 美化滚动条 (QSS) - 这一大段是为了让滚动条变细、变深色
     scrollArea->setStyleSheet(
         "QScrollArea { "
         "   background: transparent; "
         "   border: none; "
         "}"
 
-        // --- 滚动条轨道 (槽) ---
         "QScrollBar:vertical { "
         "    border: none; "
-        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
-        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    background: #111111; "
+        "    width: 14px; "
         "    margin: 0px; "
         "}"
 
-        // --- 滚动滑块 (那个拖动的块) ---
         "QScrollBar::handle:vertical { "
-        "    background: #666666; "  // 明显的灰色
-        "    min-height: 30px; "     // 最小高度设大一点
-        "    border-radius: 7px; "   // 圆角
-        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "    background: #666666; "
+        "    min-height: 30px; "
+        "    border-radius: 7px; "
+        "    margin: 2px; "
         "}"
 
-        // --- 鼠标悬停变亮 ---
         "QScrollBar::handle:vertical:hover { "
-        "    background: #999999; "  // 悬停变白一点
+        "    background: #999999; "
         "}"
 
-        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
         "    height: 0px; "
         "}"
@@ -5548,26 +5861,20 @@ void SessionList::setupUi()
         "}"
         );
 
-    // 5. 创建滚动区域内部的“容器画布”
     QWidget* scrollContent = new QWidget();
-    scrollContent->setStyleSheet("background: transparent;"); // 必须透明，否则会挡住背景
+    scrollContent->setStyleSheet("background: transparent;");
 
-    // 6. 内部布局 (用来放 Label 和 SessionItem)
     m_scrollLayout = new QVBoxLayout(scrollContent);
-    m_scrollLayout->setContentsMargins(10, 10, 10, 10); // 内容的边距
+    m_scrollLayout->setContentsMargins(10, 10, 10, 10);
     m_scrollLayout->setSpacing(5);
 
-    // 添加标题
     QLabel* labelTitle = new QLabel("最近历史", scrollContent);
     labelTitle->setStyleSheet("color: #8E8EA0; font-size: 12px; margin-bottom: 5px; border: none;");
     m_scrollLayout->addWidget(labelTitle);
 
-    // 7. 组装：把容器塞进 ScrollArea，把 ScrollArea 塞进最外层布局
     scrollArea->setWidget(scrollContent);
     rootLayout->addWidget(scrollArea);
 
-    // 8. 添加弹簧 (Stretch)
-    // 把它放在内部布局的最后，把 Item 往上顶
     m_scrollLayout->addStretch();
 }
 
@@ -5575,7 +5882,6 @@ void SessionList::addSession(int id, const QString& title)
 {
     SessionItem* item = new SessionItem(id, title, this);
 
-    // --- 信号连接部分保持不变 ---
     connect(item, &SessionItem::itemClicked, this, [=](SessionItem* clickedItem){
         handleItemSelection(clickedItem);
         emit sessionSwitchRequest(clickedItem->id());
@@ -5591,19 +5897,12 @@ void SessionList::addSession(int id, const QString& title)
         }
         emit sessionDeleteRequest(deletedId);
 
-        // 【注意】这里要从 m_scrollLayout 移除，而不是 m_mainLayout
         m_scrollLayout->removeWidget(item);
         item->deleteLater();
     });
 
-    // ---------------------------------------------------------
-    // 插入 UI
-    // ---------------------------------------------------------
-
-    // 【新增】加入管理列表
     m_items.append(item);
 
-    // 【注意】插入到 m_scrollLayout，且在弹簧之前
     m_scrollLayout->insertWidget(m_scrollLayout->count() - 1, item);
 
     if (m_currentSessionItem == nullptr) {
@@ -5611,7 +5910,6 @@ void SessionList::addSession(int id, const QString& title)
     }
 }
 
-// handleItemSelection 保持不变...
 void SessionList::handleItemSelection(SessionItem* clickedItem)
 {
     if (m_currentSessionItem == clickedItem) return;
@@ -5619,7 +5917,6 @@ void SessionList::handleItemSelection(SessionItem* clickedItem)
     if (clickedItem) clickedItem->setSelected(true);
     m_currentSessionItem = clickedItem;
 }
-
 
 void SessionList::clear()
 {
@@ -5634,7 +5931,7 @@ void SessionList::clear()
 
 void SessionList::loadSessions(const QVector<SessionData>& sessions)
 {
-    clear(); // 先清空旧的
+    clear();
 
     for (const auto& s : sessions) {
         addSession(s.id, s.name);
@@ -5643,12 +5940,9 @@ void SessionList::loadSessions(const QVector<SessionData>& sessions)
 
 void SessionList::selectSession(int id)
 {
-    // 遍历所有 Item 找到匹配的 ID
     for (SessionItem* item : m_items) {
         if (item->id() == id) {
-            handleItemSelection(item); // 调用内部函数设置高亮样式
-            // 注意：这里我们只改变样式，不发送信号，避免死循环
-            // 数据的加载由 MainWindow 主动调用 loadSessionHistory
+            handleItemSelection(item);
             return;
         }
     }
@@ -5657,9 +5951,6 @@ void SessionList::selectSession(int id)
 int SessionList::getFirstSessionId() const
 {
     if (m_items.isEmpty()) return -1;
-    // 因为是垂直布局，且 addSession 是 append 到布局末尾
-    // 但数据源通常是倒序的（最新的在前面），所以列表的第一个就是最新的
-    // 这里的 0 索引对应 UI 上最顶部的元素
     return m_items.first()->id();
 }
 
@@ -5686,7 +5977,7 @@ int SessionList::getFirstSessionId() const
 #include <QVBoxLayout>
 #include <QList>
 #include <QScrollArea>
-#include "../../Model/DataModels.h" // 【新增】引入数据模型
+#include "../../Model/DataModels.h"
 
 class SessionItem;
 class QPushButton;
@@ -5700,13 +5991,14 @@ class QPushButton;
 class SessionList : public QWidget
 {
     Q_OBJECT
+
 public:
     /**
      * @brief 构造函数
      * @param parent 父窗口指针
      */
     explicit SessionList(QWidget *parent = nullptr);
-    
+
     /**
      * @brief 添加新会话
      * @param id 会话ID
@@ -5714,18 +6006,30 @@ public:
      */
     void addSession(int id, const QString& title);
 
-    // 【新增】清空列表
+    /**
+     * @brief 清空列表
+     */
     void clear();
 
-    // 【新增】加载会话列表数据
+    /**
+     * @brief 加载会话列表数据
+     * @param sessions 会话数据列表
+     */
     void loadSessions(const QVector<SessionData>& sessions);
 
-    // 【新增】通过 ID 选中指定会话（用于初始化时高亮）
+    /**
+     * @brief 通过ID选中指定会话
+     * @param id 会话ID
+     * 
+     * 用于初始化时高亮
+     */
     void selectSession(int id);
 
-    // 【新增】获取列表里的第一个会话ID（如果没有则返回 -1）
+    /**
+     * @brief 获取列表里的第一个会话ID
+     * @return int 第一个会话ID，如果没有则返回-1
+     */
     int getFirstSessionId() const;
-
 
 signals:
     /**
@@ -5733,25 +6037,24 @@ signals:
      * @param id 目标会话ID
      */
     void sessionSwitchRequest(int id);
-    
+
     /**
      * @brief 会话删除请求信号
      * @param id 目标会话ID
      */
     void sessionDeleteRequest(int id);
-    
+
     /**
      * @brief 会话重命名请求信号
      * @param id 目标会话ID
      * @param newName 新会话名称
      */
     void sessionRenameRequest(int id, const QString& newName);
-    
+
     /**
      * @brief 新建会话请求信号
      */
     void createNewSessionRequest();
-
 
 private:
     /**
@@ -5769,10 +6072,8 @@ private:
     QVBoxLayout* m_mainLayout; ///< 主布局
     QVBoxLayout* m_scrollLayout; ///< 滚动区域布局
     QPushButton* m_btnNew; ///< 新建会话按钮
-
-    SessionItem* m_currentSessionItem = nullptr; ///< 当前选中的会话项指针
-
-    QList<SessionItem*> m_items; // 【新增】管理所有 Item 指针
+    SessionItem* m_currentSessionItem; ///< 当前选中的会话项指针
+    QList<SessionItem*> m_items; ///< 管理所有Item指针
 };
 
 
@@ -5780,23 +6081,32 @@ private:
 
 --- 文件开始: src\Ui\Components\SettingsDialog.cpp ---
 
+/**
+ * @file SettingsDialog.cpp
+ * @brief 服务器设置对话框组件实现文件
+ * 
+ * 该文件实现了SettingsDialog类，提供服务器地址配置功能，支持保存和读取服务器配置。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "SettingsDialog.h"
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 #include <QLabel>
-#include <QSettings> // 必须引用这个
+#include <QSettings>
 
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     setWindowTitle("服务器设置");
-    setFixedSize(400, 200); // 稍微改大一点
+    setFixedSize(400, 200);
 
-    // 1. 读取保存的配置 (如果没有保存过，默认就是本地 8000)
     QSettings settings("CloudArt", "AppConfig");
     QString savedUrl = settings.value("Server/Url", "http://127.0.0.1:8000").toString();
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-    // 输入框
     QLabel* lbl = new QLabel("地址:", this);
     m_editUrl = new QLineEdit(savedUrl, this);
     m_editUrl->setPlaceholderText("例如: http://frp-fly.top:12345");
@@ -5804,7 +6114,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     mainLayout->addWidget(lbl);
     mainLayout->addWidget(m_editUrl);
 
-    // 提示信息
     QLabel* tip = new QLabel("复制完整的穿透链接填入", this);
     tip->setStyleSheet("color: #666; font-size: 12px; margin-top: 5px;");
     tip->setWordWrap(true);
@@ -5812,10 +6121,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
 
     mainLayout->addStretch();
 
-    // 按钮
     QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, [=](){
-        // 【关键】点击确定时，保存配置
         QSettings settings("CloudArt", "AppConfig");
         settings.setValue("Server/Url", m_editUrl->text().trimmed());
         accept();
@@ -5833,27 +6140,65 @@ QString SettingsDialog::getUrl() const {
 
 --- 文件开始: src\Ui\Components\SettingsDialog.h ---
 
+/**
+ * @file SettingsDialog.h
+ * @brief 设置对话框组件头文件
+ * 
+ * 该文件定义了SettingsDialog类，用于配置应用程序的连接设置。
+ * 提供ComfyUI服务器地址的配置界面。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #pragma once
+
 #include <QDialog>
 #include <QLineEdit>
 
-class SettingsDialog : public QDialog {
+/**
+ * @brief 设置对话框类
+ * 
+ * 继承自QDialog，提供应用程序设置界面。
+ * 用于配置ComfyUI服务器的连接地址。
+ */
+class SettingsDialog : public QDialog
+{
     Q_OBJECT
+
 public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
     explicit SettingsDialog(QWidget *parent = nullptr);
 
-    // 【修改】只留一个获取 URL 的函数
+    /**
+     * @brief 获取配置的URL
+     * @return QString ComfyUI服务器地址
+     */
     QString getUrl() const;
 
 private:
-    // 【修改】只留一个输入框指针
-    QLineEdit* m_editUrl;
+    QLineEdit* m_editUrl; ///< URL输入框
 };
 
 
 --- 文件结束: src\Ui\Components\SettingsDialog.h ---
 
 --- 文件开始: src\Ui\Components\SidebarControl.cpp ---
+
+/**
+ * @file SidebarControl.cpp
+ * @brief 侧边栏控制组件实现文件
+ * 
+ * 该文件实现了SidebarControl类，提供侧边栏控制按钮，包括对话记录、生成记录和服务器设置。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
 
 #include "SidebarControl.h"
 
@@ -5880,14 +6225,10 @@ SidebarControl::SidebarControl(QWidget* parent)
     m_layout->addWidget(m_toggleBtn);
     m_layout->addWidget(m_historyBtn);
     
-    // 【新增】添加一个弹簧，把设置按钮顶到最底部
     m_layout->addStretch();
 
-    // 【新增】创建设置按钮
-    // 注意：这里暂时复用 'HideConversation.png' 图标，你可以以后换成齿轮图标
     m_settingsBtn = createBtn(":/images/setting.png", "服务器设置");
 
-    // 如果想区分，可以暂时给它变个色或者样式，这里先保持一致
     m_layout->addWidget(m_settingsBtn);
 
     setFixedWidth(40);
@@ -5946,6 +6287,18 @@ QToolButton* SidebarControl::settingsBtn() const
 
 --- 文件开始: src\Ui\Components\SidebarControl.h ---
 
+/**
+ * @file SidebarControl.h
+ * @brief 侧边栏控制组件头文件
+ * 
+ * 该文件定义了SidebarControl类，提供侧边栏的切换、历史记录和设置功能。
+ * 包含侧边栏展开/收起、历史记录查看和设置按钮等功能。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #pragma once
 
 #include <QWidget>
@@ -5953,28 +6306,66 @@ QToolButton* SidebarControl::settingsBtn() const
 
 class QVBoxLayout;
 
+/**
+ * @brief 侧边栏控制组件类
+ * 
+ * 继承自QWidget，提供侧边栏的控制功能。
+ * 包含侧边栏展开/收起按钮、历史记录按钮和设置按钮。
+ */
 class SidebarControl : public QWidget
 {
     Q_OBJECT
 
 public:
+    /**
+     * @brief 构造函数
+     * @param parent 父窗口指针
+     */
     explicit SidebarControl(QWidget* parent = nullptr);
+
+    /**
+     * @brief 析构函数
+     */
     ~SidebarControl();
 
+    /**
+     * @brief 获取切换按钮
+     * @return QToolButton* 切换按钮指针
+     */
     QToolButton* toggleBtn() const;
+
+    /**
+     * @brief 获取历史记录按钮
+     * @return QToolButton* 历史记录按钮指针
+     */
     QToolButton* historyBtn() const;
-    void updateToggleState(bool isExpanded);
-    // 【新增】获取设置按钮的指针
+
+    /**
+     * @brief 获取设置按钮
+     * @return QToolButton* 设置按钮指针
+     */
     QToolButton* settingsBtn() const;
 
+    /**
+     * @brief 更新切换按钮状态
+     * @param isExpanded 侧边栏是否展开
+     */
+    void updateToggleState(bool isExpanded);
+
 private:
+    /**
+     * @brief 创建工具按钮
+     * @param iconPath 图标路径
+     * @param tooltip 工具提示文本
+     * @return QToolButton* 创建的按钮指针
+     */
     QToolButton* createBtn(const QString& iconPath, const QString& tooltip);
 
-    QVBoxLayout* m_layout;
-    QToolButton* m_toggleBtn;
-    QToolButton* m_historyBtn;
-    // 【新增】设置按钮变量
-    QToolButton* m_settingsBtn;
+private:
+    QVBoxLayout* m_layout; ///< 主布局
+    QToolButton* m_toggleBtn; ///< 切换按钮
+    QToolButton* m_historyBtn; ///< 历史记录按钮
+    QToolButton* m_settingsBtn; ///< 设置按钮
 };
 
 

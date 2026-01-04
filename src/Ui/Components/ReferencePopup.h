@@ -75,9 +75,6 @@ protected:
      */
     void dropEvent(QDropEvent *event) override;
 
-    // 焦点失去时隐藏（模拟 Popup 行为）
-    // void focusOutEvent(QFocusEvent *event) override;
-
 private:
     /**
      * @brief 初始化UI布局
@@ -98,12 +95,12 @@ private:
 private:
     // 数据
     QPixmap m_currentImage; ///< 当前图片数据
-    QString m_currentPath; ///< 当前图片路径
+    QString m_currentPath = ""; ///< 当前图片路径
 
     // UI 组件
-    QStackedLayout* m_stackLayout; ///< 堆叠布局，用于界面切换
-    QWidget* m_pageEmpty; ///< 空状态页面
-    QWidget* m_pagePreview; ///< 预览状态页面
+    QStackedLayout* m_stackLayout = nullptr; ///< 堆叠布局，用于界面切换
+    QWidget* m_pageEmpty = nullptr; ///< 空状态页面
+    QWidget* m_pagePreview = nullptr; ///< 预览状态页面
 
-    QLabel* m_lblPreview; ///< 图片预览标签
+    QLabel* m_lblPreview = nullptr; ///< 图片预览标签
 };

@@ -1,9 +1,20 @@
+/**
+ * @file SessionList.cpp
+ * @brief 会话列表组件实现文件
+ * 
+ * 该文件实现了SessionList类，提供会话列表管理功能，包括会话的添加、选择、重命名和删除。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "SessionList.h"
 #include "SessionItem.h"
 #include <QPushButton>
 #include <QLabel>
 #include <QScrollArea>
-#include <QScrollBar> // 用于美化滚动条
+#include <QScrollBar>
 
 SessionList::SessionList(QWidget *parent)
     : QWidget(parent)
@@ -12,22 +23,21 @@ SessionList::SessionList(QWidget *parent)
     setupUi();
 }
 
+/**
+ * @brief 设置UI界面
+ */
 void SessionList::setupUi()
 {
-    // 1. 设置侧边栏基本属性
     this->setFixedWidth(260);
     this->setStyleSheet("background-color: #202123; border-right: 1px solid #4D4D4F;");
 
-    // 2. 最外层布局 (垂直)
     QVBoxLayout* rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 20, 0, 0); // 顶部留白，左右下贴边
+    rootLayout->setContentsMargins(0, 20, 0, 0);
     rootLayout->setSpacing(10);
 
-    // 3. 固定在顶部的“新建会话”按钮
-    // 为了让按钮左右有间距，我们给它包一层容器，或者直接设置 margin
     QWidget* topContainer = new QWidget(this);
     QVBoxLayout* topLayout = new QVBoxLayout(topContainer);
-    topLayout->setContentsMargins(10, 0, 10, 0); // 按钮左右留白
+    topLayout->setContentsMargins(10, 0, 10, 0);
 
     m_btnNew = new QPushButton("+ 新建会话", this);
     m_btnNew->setFixedHeight(45);
@@ -48,41 +58,35 @@ void SessionList::setupUi()
     topLayout->addWidget(m_btnNew);
     rootLayout->addWidget(topContainer);
 
-    // 4. 创建滚动区域 (QScrollArea)
     QScrollArea* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true); // 关键：让内部容器宽度自适应 ScrollArea
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 只要垂直滚动，不要水平
-    scrollArea->setFrameShape(QFrame::NoFrame); // 去掉 ScrollArea 自带的边框
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setFrameShape(QFrame::NoFrame);
 
-    // 美化滚动条 (QSS) - 这一大段是为了让滚动条变细、变深色
     scrollArea->setStyleSheet(
         "QScrollArea { "
         "   background: transparent; "
         "   border: none; "
         "}"
 
-        // --- 滚动条轨道 (槽) ---
         "QScrollBar:vertical { "
         "    border: none; "
-        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
-        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    background: #111111; "
+        "    width: 14px; "
         "    margin: 0px; "
         "}"
 
-        // --- 滚动滑块 (那个拖动的块) ---
         "QScrollBar::handle:vertical { "
-        "    background: #666666; "  // 明显的灰色
-        "    min-height: 30px; "     // 最小高度设大一点
-        "    border-radius: 7px; "   // 圆角
-        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "    background: #666666; "
+        "    min-height: 30px; "
+        "    border-radius: 7px; "
+        "    margin: 2px; "
         "}"
 
-        // --- 鼠标悬停变亮 ---
         "QScrollBar::handle:vertical:hover { "
-        "    background: #999999; "  // 悬停变白一点
+        "    background: #999999; "
         "}"
 
-        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
         "    height: 0px; "
         "}"
@@ -91,26 +95,20 @@ void SessionList::setupUi()
         "}"
         );
 
-    // 5. 创建滚动区域内部的“容器画布”
     QWidget* scrollContent = new QWidget();
-    scrollContent->setStyleSheet("background: transparent;"); // 必须透明，否则会挡住背景
+    scrollContent->setStyleSheet("background: transparent;");
 
-    // 6. 内部布局 (用来放 Label 和 SessionItem)
     m_scrollLayout = new QVBoxLayout(scrollContent);
-    m_scrollLayout->setContentsMargins(10, 10, 10, 10); // 内容的边距
+    m_scrollLayout->setContentsMargins(10, 10, 10, 10);
     m_scrollLayout->setSpacing(5);
 
-    // 添加标题
     QLabel* labelTitle = new QLabel("最近历史", scrollContent);
     labelTitle->setStyleSheet("color: #8E8EA0; font-size: 12px; margin-bottom: 5px; border: none;");
     m_scrollLayout->addWidget(labelTitle);
 
-    // 7. 组装：把容器塞进 ScrollArea，把 ScrollArea 塞进最外层布局
     scrollArea->setWidget(scrollContent);
     rootLayout->addWidget(scrollArea);
 
-    // 8. 添加弹簧 (Stretch)
-    // 把它放在内部布局的最后，把 Item 往上顶
     m_scrollLayout->addStretch();
 }
 
@@ -118,7 +116,6 @@ void SessionList::addSession(int id, const QString& title)
 {
     SessionItem* item = new SessionItem(id, title, this);
 
-    // --- 信号连接部分保持不变 ---
     connect(item, &SessionItem::itemClicked, this, [=](SessionItem* clickedItem){
         handleItemSelection(clickedItem);
         emit sessionSwitchRequest(clickedItem->id());
@@ -134,19 +131,12 @@ void SessionList::addSession(int id, const QString& title)
         }
         emit sessionDeleteRequest(deletedId);
 
-        // 【注意】这里要从 m_scrollLayout 移除，而不是 m_mainLayout
         m_scrollLayout->removeWidget(item);
         item->deleteLater();
     });
 
-    // ---------------------------------------------------------
-    // 插入 UI
-    // ---------------------------------------------------------
-
-    // 【新增】加入管理列表
     m_items.append(item);
 
-    // 【注意】插入到 m_scrollLayout，且在弹簧之前
     m_scrollLayout->insertWidget(m_scrollLayout->count() - 1, item);
 
     if (m_currentSessionItem == nullptr) {
@@ -154,7 +144,6 @@ void SessionList::addSession(int id, const QString& title)
     }
 }
 
-// handleItemSelection 保持不变...
 void SessionList::handleItemSelection(SessionItem* clickedItem)
 {
     if (m_currentSessionItem == clickedItem) return;
@@ -162,7 +151,6 @@ void SessionList::handleItemSelection(SessionItem* clickedItem)
     if (clickedItem) clickedItem->setSelected(true);
     m_currentSessionItem = clickedItem;
 }
-
 
 void SessionList::clear()
 {
@@ -177,7 +165,7 @@ void SessionList::clear()
 
 void SessionList::loadSessions(const QVector<SessionData>& sessions)
 {
-    clear(); // 先清空旧的
+    clear();
 
     for (const auto& s : sessions) {
         addSession(s.id, s.name);
@@ -186,22 +174,20 @@ void SessionList::loadSessions(const QVector<SessionData>& sessions)
 
 void SessionList::selectSession(int id)
 {
-    // 遍历所有 Item 找到匹配的 ID
     for (SessionItem* item : m_items) {
         if (item->id() == id) {
-            handleItemSelection(item); // 调用内部函数设置高亮样式
-            // 注意：这里我们只改变样式，不发送信号，避免死循环
-            // 数据的加载由 MainWindow 主动调用 loadSessionHistory
+            handleItemSelection(item);
             return;
         }
     }
 }
 
+/**
+ * @brief 获取第一个会话ID
+ * @return 会话ID，如果没有会话则返回-1
+ */
 int SessionList::getFirstSessionId() const
 {
     if (m_items.isEmpty()) return -1;
-    // 因为是垂直布局，且 addSession 是 append 到布局末尾
-    // 但数据源通常是倒序的（最新的在前面），所以列表的第一个就是最新的
-    // 这里的 0 索引对应 UI 上最顶部的元素
     return m_items.first()->id();
 }

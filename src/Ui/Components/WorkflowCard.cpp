@@ -25,11 +25,8 @@
 
 /**
  * @brief WorkflowCard构造函数
- * @param info 工作流信息结构体，包含名称、描述、图片路径等
+ * @param info 工作流信息结构体
  * @param parent 父窗口指针
- * 
- * 初始化工作流卡片，设置UI布局、动画效果和事件处理。
- * 支持GIF动画的延迟初始化以优化性能。
  */
 WorkflowCard::WorkflowCard(const WorkflowInfo& info, QWidget* parent)
     : QWidget(parent)
@@ -215,8 +212,6 @@ void WorkflowCard::setScale(qreal scale)
 /**
  * @brief 鼠标进入事件处理
  * @param event 鼠标进入事件
- * 
- * 处理鼠标悬停效果，开始GIF动画，更新背景图片和鼠标样式。
  */
 void WorkflowCard::enterEvent(QEnterEvent *event)
 {
@@ -286,9 +281,6 @@ void WorkflowCard::resizeEvent(QResizeEvent *event)
 /**
  * @brief 绘制事件处理
  * @param event 绘制事件
- * 
- * 重写绘制事件，明确不处理背景绘制，完全由QLabel负责。
- * 此方法仅保留作为占位，确保不会意外绘制背景。
  */
 void WorkflowCard::paintEvent(QPaintEvent *event)
 {
@@ -299,9 +291,6 @@ void WorkflowCard::paintEvent(QPaintEvent *event)
 
 /**
  * @brief 开始GIF动画
- * 
- * 延迟初始化GIF动画，连接帧更新信号，启动动画播放。
- * 支持GIF动画的缓存和错误处理。
  */
 void WorkflowCard::startGifAnimation()
 {
@@ -345,8 +334,6 @@ void WorkflowCard::startGifAnimation()
 
 /**
  * @brief 停止GIF动画
- * 
- * 停止GIF动画播放，重置到第一帧，确保下次播放从头开始。
  */
 void WorkflowCard::stopGifAnimation()
 {

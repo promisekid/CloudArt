@@ -1,3 +1,15 @@
+/**
+ * @file DatabaseManager.cpp
+ * @brief 数据库管理器实现文件
+ * 
+ * 该文件实现了DatabaseManager类，负责应用程序的数据库操作。
+ * 使用单例模式管理数据库连接，提供会话和消息的增删改查接口。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "DatabaseManager.h"
 #include <QSqlQuery>
 #include <QSqlError>
@@ -6,54 +18,67 @@
 #include <QDebug>
 #include <QVariant>
 
+/**
+ * @brief 获取单例实例
+ * @return DatabaseManager& 数据库管理器单例引用
+ */
 DatabaseManager& DatabaseManager::instance()
 {
     static DatabaseManager instance;
     return instance;
 }
 
+/**
+ * @brief 构造函数
+ * @param parent 父对象指针
+ */
 DatabaseManager::DatabaseManager(QObject *parent) : QObject(parent) {}
 
+/**
+ * @brief 析构函数
+ */
 DatabaseManager::~DatabaseManager()
 {
     if (m_db.isOpen()) m_db.close();
 }
 
+/**
+ * @brief 初始化数据库
+ * @return bool 初始化是否成功
+ * 
+ * 打开数据库连接并创建必要的数据表
+ */
 bool DatabaseManager::init()
 {
-    // 1. 确定数据库存放在哪里
-    // 也就是 C:/Users/用户名/AppData/Local/CloudArt/cloudart.db
     QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
-    // 确保文件夹存在
     QDir dir(dataDir);
     if (!dir.exists()) dir.mkpath(".");
 
     QString dbPath = dataDir + "/cloudart.db";
-    qDebug() << "📂 数据库路径:" << dbPath;
+    qDebug() << "数据库路径:" << dbPath;
 
-    // 2. 连接 SQLite
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(dbPath);
 
     if (!m_db.open()) {
-        qDebug() << "❌ 打开数据库失败:" << m_db.lastError().text();
+        qDebug() << "打开数据库失败:" << m_db.lastError().text();
         return false;
     }
 
-    // 3. 检查并创建表
     createTables();
     return true;
 }
 
+/**
+ * @brief 创建数据表
+ * 
+ * 创建会话表和消息表（如果不存在）
+ */
 void DatabaseManager::createTables()
 {
     QSqlQuery query;
 
-    // --- 表1：会话表 ---
-    // id: 自增主键
-    // title: 会话名
-    // created_at: 创建时间
     bool success = query.exec(
         "CREATE TABLE IF NOT EXISTS tb_sessions ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -61,14 +86,8 @@ void DatabaseManager::createTables()
         "created_at INTEGER"
         ")"
         );
-    if (!success) qDebug() << "❌ tb_sessions 建表失败:" << query.lastError();
+    if (!success) qDebug() << "tb_sessions 建表失败:" << query.lastError();
 
-    // --- 表2：消息表 ---
-    // session_id: 属于哪个会话
-    // role: 'user' 或 'ai'
-    // content: 文字内容
-    // image_path: 图片路径
-    // timestamp: 时间
     success = query.exec(
         "CREATE TABLE IF NOT EXISTS tb_messages ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -79,31 +98,40 @@ void DatabaseManager::createTables()
         "timestamp INTEGER"
         ")"
         );
-    if (!success) qDebug() << "❌ tb_messages 建表失败:" << query.lastError();
+    if (!success) qDebug() << "tb_messages 建表失败:" << query.lastError();
 }
 
+/**
+ * @brief 创建新会话
+ * @param name 会话名称
+ * @return int 新创建的会话ID，失败返回-1
+ */
 int DatabaseManager::createSession(const QString& name)
 {
     QSqlQuery query;
-    // 使用 prepare 预处理语句，:name 是占位符
     query.prepare("INSERT INTO tb_sessions (title, created_at) VALUES (:name, :time)");
 
     query.bindValue(":name", name);
     query.bindValue(":time", QDateTime::currentMSecsSinceEpoch());
 
     if (query.exec()) {
-        // 返回新插入行的自增 ID
         return query.lastInsertId().toInt();
     }
 
-    qDebug() << "❌ 创建会话失败:" << query.lastError();
+    qDebug() << "创建会话失败:" << query.lastError();
     return -1;
 }
 
+/**
+ * @brief 获取所有会话
+ * @return QVector<SessionData> 所有会话的数据列表
+ * 
+ * 用于初始化左侧会话列表
+ */
 QVector<SessionData> DatabaseManager::getAllSessions()
 {
     QVector<SessionData> list;
-    QSqlQuery query("SELECT * FROM tb_sessions ORDER BY created_at DESC"); // 按时间倒序，新的在上面
+    QSqlQuery query("SELECT * FROM tb_sessions ORDER BY created_at DESC");
 
     while (query.next()) {
         SessionData session;
@@ -115,6 +143,12 @@ QVector<SessionData> DatabaseManager::getAllSessions()
     return list;
 }
 
+/**
+ * @brief 重命名会话
+ * @param id 会话ID
+ * @param newName 新会话名称
+ * @return bool 重命名是否成功
+ */
 bool DatabaseManager::renameSession(int id, const QString& newName)
 {
     QSqlQuery query;
@@ -124,25 +158,29 @@ bool DatabaseManager::renameSession(int id, const QString& newName)
     return query.exec();
 }
 
+/**
+ * @brief 删除会话
+ * @param id 会话ID
+ * @return bool 删除是否成功
+ */
 bool DatabaseManager::deleteSession(int id)
 {
-    // 1. 先删消息 (虽然 SQLite 可以设级联删除，但手动删更稳妥)
     QSqlQuery queryMsg;
     queryMsg.prepare("DELETE FROM tb_messages WHERE session_id = :sid");
     queryMsg.bindValue(":sid", id);
     queryMsg.exec();
 
-    // 2. 再删会话
     QSqlQuery query;
     query.prepare("DELETE FROM tb_sessions WHERE id = :id");
     query.bindValue(":id", id);
     return query.exec();
 }
 
-// =========================================================
-// 消息操作实现
-// =========================================================
-
+/**
+ * @brief 添加新消息
+ * @param msg 消息数据
+ * @return int 新消息的ID，失败返回-1
+ */
 int DatabaseManager::addMessage(const MessageData& msg)
 {
     QSqlQuery query;
@@ -150,7 +188,6 @@ int DatabaseManager::addMessage(const MessageData& msg)
                   "VALUES (:sid, :role, :content, :img, :time)");
 
     query.bindValue(":sid", msg.sessionId);
-    // 枚举转字符串存入
     query.bindValue(":role", msg.role == MessageRole::User ? "user" : "ai");
     query.bindValue(":content", msg.text);
     query.bindValue(":img", msg.imagePath);
@@ -160,26 +197,28 @@ int DatabaseManager::addMessage(const MessageData& msg)
         return query.lastInsertId().toInt();
     }
 
-    qDebug() << "❌ 插入消息失败:" << query.lastError();
+    qDebug() << "插入消息失败:" << query.lastError();
     return -1;
 }
 
+/**
+ * @brief 获取指定会话的所有消息
+ * @param sessionId 会话ID
+ * @return QVector<MessageData> 消息数据列表
+ */
 QVector<MessageData> DatabaseManager::getMessages(int sessionId)
 {
     QVector<MessageData> list;
     QSqlQuery query;
-    // 按时间正序，早说的话在上面
     query.prepare("SELECT * FROM tb_messages WHERE session_id = :sid ORDER BY timestamp ASC");
     query.bindValue(":sid", sessionId);
 
     if (!query.exec()) {
-        qDebug() << "❌ 查询消息失败:" << query.lastError();
+        qDebug() << "查询消息失败:" << query.lastError();
         return list;
     }
 
     while (query.next()) {
-        // 使用构造函数方便一点，或者手动赋值
-        // int sid, MessageRole r, const QString& t, const QString& img
         int id = query.value("id").toInt();
         int sid = query.value("session_id").toInt();
         QString roleStr = query.value("role").toString();
@@ -198,12 +237,14 @@ QVector<MessageData> DatabaseManager::getMessages(int sessionId)
     return list;
 }
 
-
+/**
+ * @brief 获取所有生成的图片路径
+ * @return QVector<QString> 图片路径列表（按时间倒序）
+ */
 QVector<QString> DatabaseManager::getAllAiImages()
 {
     QVector<QString> list;
     QSqlQuery query;
-    // 查询所有 role 为 'ai' 且 image_path 不为空的记录，按时间倒序排列
     query.prepare("SELECT image_path FROM tb_messages WHERE role = 'ai' AND image_path != '' ORDER BY timestamp DESC");
 
     if (query.exec()) {
@@ -211,7 +252,7 @@ QVector<QString> DatabaseManager::getAllAiImages()
             list.append(query.value("image_path").toString());
         }
     } else {
-        qDebug() << "❌ 查询历史图片失败:" << query.lastError();
+        qDebug() << "查询历史图片失败:" << query.lastError();
     }
     return list;
 }

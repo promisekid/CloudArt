@@ -21,9 +21,6 @@
 #include "../Database/DatabaseManager.h"
 #include "Components/SettingsDialog.h"
 
-
-// --- 前向声明 (Forward Declarations) ---
-// 这样做的好处是不用在这里 #include 所有头文件，编译更快，也不容易报错
 class InputPanel;
 class WorkflowSelector;
 class ReferencePopup;
@@ -52,7 +49,7 @@ public:
      * @param parent 父窗口指针
      */
     explicit MainWindow(QWidget *parent = nullptr);
-    
+
     /**
      * @brief 析构函数
      */
@@ -63,42 +60,47 @@ private slots:
      * @brief 工作流按钮点击槽函数
      */
     void onWorkflowBtnClicked();
-    
+
     /**
      * @brief 参考图按钮点击槽函数
      */
     void onRefBtnClicked();
-    
+
     /**
      * @brief 工作流选择槽函数
      * @param info 选中的工作流信息
      */
     void onWorkflowSelected(const WorkflowInfo& info);
-    
+
     /**
      * @brief 生成按钮点击槽函数
      * @param prompt 用户输入的提示词
      */
     void onGenerateClicked(const QString& prompt);
-    
+
     /**
      * @brief 切换左侧容器显示状态
      */
     void onToggleLeftContainer();
-    
+
     /**
      * @brief 切换到会话列表页面
      */
     void switchToSessionList();
-    
+
     /**
      * @brief 切换到历史记录页面
      */
     void switchToHistoryWindow();
 
-    // 【新增】处理反推按钮点击
+    /**
+     * @brief 处理反推按钮点击
+     */
     void onInterrogateClicked();
 
+    /**
+     * @brief 加载并连接各个组件
+     */
     void loadAndConnect();
 
 protected:
@@ -119,10 +121,14 @@ private:
      */
     void updateSidebarPosition();
 
-    // 【新增】加载所有历史会话
+    /**
+     * @brief 加载所有历史会话
+     */
     void loadSessionList();
 
-    // 【新增】创建新会话的逻辑
+    /**
+     * @brief 创建新会话
+     */
     void createNewSession();
 
     /**
@@ -131,77 +137,50 @@ private:
      */
     void switchLeftPanel(int targetIndex);
 
+    /**
+     * @brief 保存图片到本地
+     * @param img 要保存的图片
+     * @return QString 保存后的文件路径
+     */
     QString saveImageToLocal(const QPixmap& img);
 
-    // --- 成员变量 (持有各个组件的指针) ---
-    // 左侧
-    QStackedWidget* m_leftStack; ///< 左侧容器堆栈
-    SessionList* m_sessionList; ///< 会话列表组件
-
-    // 右侧
-    ChatArea* m_chatArea; ///< 聊天区域组件
-    InputPanel* m_inputPanel; ///< 底部控制面板组件
-
-    // 浮动窗口 (Popups)
-    WorkflowSelector* m_wfSelector; ///< 工作流选择面板组件
-    ReferencePopup* m_refPopup; ///< 参考图上传面板组件
-
-    // 切换按钮和动画
-    SidebarControl* m_sidebarControl; ///< 侧边栏控制组件
-    QPropertyAnimation* m_leftContainerAnimation; ///< 左侧容器动画效果
-    bool m_leftContainerVisible; ///< 左侧容器是否可见
-    int m_leftContainerOriginalWidth; ///< 左侧容器的初始宽度
-    int m_currentPageIndex; ///< 当前显示的页面索引
-    
-    HistoryGallery* m_historyGallery; // 【新增】新的类型
-    
-    /** 主布局 */
-    QHBoxLayout* m_mainLayout;
-    
-    /** API服务 */
-    ComfyApiService* m_apiService;
-
-    // 【新增】业务逻辑管理器
-    WorkflowManager* m_wfManager;
-
-    // 【新增】记录当前选中的工作流类型 (默认为文生图)
-    WorkflowType m_currentWorkflowType = WorkflowType::TextToImage;
-
-    // 1. 暂存刚刚创建的加载气泡（等待 API 返回 prompt_id）
-    ChatBubble* m_tempBubbleForId = nullptr;
-
-    // 2. 映射表：任务ID -> 气泡指针 (用于在图片生成后找到对应的气泡)
-    QMap<QString, ChatBubble*> m_pendingBubbles;
-
-    // 【新增】标记当前上传操作是否为了高清修复
-    bool m_isUploadingForUpscale = false;
-
-    // 【新增】暂存高清修复的气泡（用于绑定ID）
-    ChatBubble* m_tempUpscaleBubble = nullptr;
-
-    // 【新增】是否正在执行任务（忙碌状态）
-    bool m_isJobRunning = false;
-
-    // 【新增】切换忙碌状态的辅助函数
-    void setJobRunning(bool running);
-
-    // 【新增】标记：当前上传是否是为了反推提示词？
-    bool m_isUploadingForInterrogate = false;
-
-    // 【新增】记住反推用的图片名（给后续图生图备用，可选）
-    QString m_currentServerRefImg;
-
-    // 【新增】标记：当前上传是否为了图生图生成
-    bool m_isUploadingForI2I = false;
-
-    // 【新增】暂存图生图需要的参数 (提示词、种子)，等上传完了一起用
-    QMap<QString, QVariant> m_pendingI2IParams;
-
-    // 【新增】用于暂存流式传输的完整文本
-    QString m_accumulatedStreamText;
-
-    // 【新增】加载指定会话的历史记录到聊天区
+    /**
+     * @brief 加载指定会话的历史记录到聊天区
+     * @param sessionId 会话ID
+     */
     void loadSessionHistory(int sessionId);
 
+    /**
+     * @brief 切换忙碌状态
+     * @param running 是否正在执行任务
+     */
+    void setJobRunning(bool running);
 
+private:
+    QStackedWidget* m_leftStack = nullptr; ///< 左侧容器堆栈
+    SessionList* m_sessionList = nullptr; ///< 会话列表组件
+    ChatArea* m_chatArea = nullptr; ///< 聊天区域组件
+    InputPanel* m_inputPanel = nullptr; ///< 底部控制面板组件
+    WorkflowSelector* m_wfSelector = nullptr; ///< 工作流选择面板组件
+    ReferencePopup* m_refPopup = nullptr; ///< 参考图上传面板组件
+    SidebarControl* m_sidebarControl = nullptr; ///< 侧边栏控制组件
+    QPropertyAnimation* m_leftContainerAnimation = nullptr; ///< 左侧容器动画效果
+    bool m_leftContainerVisible = true; ///< 左侧容器是否可见
+    int m_leftContainerOriginalWidth = 250; ///< 左侧容器的初始宽度
+    int m_currentPageIndex = 0; ///< 当前显示的页面索引
+    HistoryGallery* m_historyGallery = nullptr; ///< 历史记录画廊组件
+    QHBoxLayout* m_mainLayout = nullptr; ///< 主布局
+    ComfyApiService* m_apiService = nullptr; ///< API服务
+    WorkflowManager* m_wfManager = nullptr; ///< 业务逻辑管理器
+    WorkflowType m_currentWorkflowType = WorkflowType::TextToImage; ///< 当前选中的工作流类型
+    ChatBubble* m_tempBubbleForId = nullptr; ///< 暂存刚刚创建的加载气泡
+    QMap<QString, ChatBubble*> m_pendingBubbles; ///< 任务ID到气泡指针的映射表
+    bool m_isUploadingForUpscale = false; ///< 标记当前上传操作是否为了高清修复
+    ChatBubble* m_tempUpscaleBubble = nullptr; ///< 暂存高清修复的气泡
+    bool m_isJobRunning = false; ///< 是否正在执行任务（忙碌状态）
+    bool m_isUploadingForInterrogate = false; ///< 标记当前上传是否为了反推提示词
+    QString m_currentServerRefImg = ""; ///< 记住反推用的图片名
+    bool m_isUploadingForI2I = false; ///< 标记当前上传是否为了图生图生成
+    QMap<QString, QVariant> m_pendingI2IParams; ///< 暂存图生图需要的参数
+    QString m_accumulatedStreamText = ""; ///< 用于暂存流式传输的完整文本
 };

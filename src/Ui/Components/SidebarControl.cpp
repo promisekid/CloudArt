@@ -1,3 +1,14 @@
+/**
+ * @file SidebarControl.cpp
+ * @brief 侧边栏控制组件实现文件
+ * 
+ * 该文件实现了SidebarControl类，提供侧边栏控制按钮，包括对话记录、生成记录和服务器设置。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
+ */
+
 #include "SidebarControl.h"
 
 #include <QVBoxLayout>
@@ -23,14 +34,10 @@ SidebarControl::SidebarControl(QWidget* parent)
     m_layout->addWidget(m_toggleBtn);
     m_layout->addWidget(m_historyBtn);
     
-    // 【新增】添加一个弹簧，把设置按钮顶到最底部
     m_layout->addStretch();
 
-    // 【新增】创建设置按钮
-    // 注意：这里暂时复用 'HideConversation.png' 图标，你可以以后换成齿轮图标
     m_settingsBtn = createBtn(":/images/setting.png", "服务器设置");
 
-    // 如果想区分，可以暂时给它变个色或者样式，这里先保持一致
     m_layout->addWidget(m_settingsBtn);
 
     setFixedWidth(40);
@@ -46,6 +53,10 @@ QToolButton* SidebarControl::toggleBtn() const
     return m_toggleBtn;
 }
 
+/**
+ * @brief 获取历史按钮
+ * @return 历史按钮指针
+ */
 QToolButton* SidebarControl::historyBtn() const
 {
     return m_historyBtn;
@@ -79,6 +90,10 @@ QToolButton* SidebarControl::createBtn(const QString& iconPath, const QString& t
     return btn;
 }
 
+/**
+ * @brief 获取设置按钮
+ * @return 设置按钮指针
+ */
 QToolButton* SidebarControl::settingsBtn() const
 {
     return m_settingsBtn;

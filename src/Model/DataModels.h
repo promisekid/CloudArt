@@ -1,55 +1,88 @@
 /**
  * @file DataModels.h
  * @brief 核心数据模型定义
+ * 
+ * 该文件定义了应用程序的核心数据模型，包括消息角色枚举、会话数据结构和消息数据结构。
+ * 
+ * @author CloudArt Team
+ * @version 1.0
+ * @date 2024
  */
 
 #pragma once
 #include <QString>
 #include <QDateTime>
 
-// 消息发送者角色 (对应数据库里的 role 字段)
+/**
+ * @brief 消息发送者角色枚举
+ * 
+ * 定义消息发送者的角色类型，对应数据库里的role字段。
+ */
 enum class MessageRole {
-    User, // 用户
-    AI    // AI
+    User, ///< 用户角色
+    AI    ///< AI角色
 };
 
-// 会话数据结构
+/**
+ * @brief 会话数据结构
+ * 
+ * 包含会话的基本信息，用于数据库存储和界面显示。
+ */
 struct SessionData {
-    int id = -1;                // 数据库ID
-    QString name;               // 会话标题
-    qint64 createdAt = 0;       // 创建时间戳
+    int id = -1;                ///< 数据库ID
+    QString name;               ///< 会话标题
+    qint64 createdAt = 0;       ///< 创建时间戳
 
-    // 1. 默认构造函数 (必须有)
+    /**
+     * @brief 默认构造函数
+     */
     SessionData() {}
 
-    // 2. 便捷构造函数 (方便代码里一行初始化)
+    /**
+     * @brief 便捷构造函数
+     * @param _id 会话ID
+     * @param _name 会话名称
+     */
     SessionData(int _id, const QString& _name)
         : id(_id), name(_name), createdAt(QDateTime::currentMSecsSinceEpoch()) {}
 };
 
-// 消息数据结构
+/**
+ * @brief 消息数据结构
+ * 
+ * 包含消息的完整信息，支持文本和图片两种类型。
+ */
 struct MessageData {
-    int id = -1;
-    int sessionId = -1;         // 外键
-    MessageRole role = MessageRole::User;
+    int id = -1;                ///< 消息ID
+    int sessionId = -1;         ///< 外键，关联的会话ID
+    MessageRole role = MessageRole::User; ///< 消息发送者角色
 
-    QString text;               // 文字内容
-    QString imagePath;          // 本地图片路径 (如果是文字则为空)
+    QString text;               ///< 文字内容
+    QString imagePath;          ///< 本地图片路径（如果是文字则为空）
 
-    qint64 timestamp = 0;       // 时间
+    qint64 timestamp = 0;       ///< 消息时间戳
 
-    // 辅助函数：判断是否是图片
+    /**
+     * @brief 判断是否是图片消息
+     * @return bool 是否为图片消息
+     */
     bool isImage() const { return !imagePath.isEmpty(); }
 
-    // 1. 默认构造函数 (必须有，用于 QSqlQuery 读取时先创建空对象)
+    /**
+     * @brief 默认构造函数
+     */
     MessageData() {}
 
-    // 2. 【关键修复】便捷构造函数 (DatabaseManager.cpp 第192行用的就是这个)
-    // 参数: 会话ID, 角色, 文本内容, 图片路径(默认空)
+    /**
+     * @brief 便捷构造函数
+     * @param sid 会话ID
+     * @param r 消息角色
+     * @param t 文本内容
+     * @param img 图片路径（可选，默认为空）
+     */
     MessageData(int sid, MessageRole r, const QString& t, const QString& img = "")
         : sessionId(sid), role(r), text(t), imagePath(img)
     {
-        // 自动填入当前时间
         timestamp = QDateTime::currentMSecsSinceEpoch();
     }
 };

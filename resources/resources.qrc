@@ -6,6 +6,10 @@
         <file>images/HideConversation.png</file>
 	<file>images/historypic.png</file>
 	<file>images/loading.gif</file>
+	<file>images/图生图演示.png</file>
+	<file>images/图生图演示.gif</file>
+	<file>images/文生图演示.png</file>
+	<file>images/文生图演示.gif</file>
     </qresource>
 
     <!-- 新增：工作流模板资源 -->

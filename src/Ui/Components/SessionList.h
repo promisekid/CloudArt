@@ -50,6 +50,12 @@ public:
     // 【新增】加载会话列表数据
     void loadSessions(const QVector<SessionData>& sessions);
 
+    // 【新增】通过 ID 选中指定会话（用于初始化时高亮）
+    void selectSession(int id);
+
+    // 【新增】获取列表里的第一个会话ID（如果没有则返回 -1）
+    int getFirstSessionId() const;
+
 
 signals:
     /**

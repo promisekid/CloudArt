@@ -1,16 +1,17 @@
 /**
  * @file MainWindow.cpp
  * @brief 主窗口实现文件
- * 
+ *
  * 该文件实现了MainWindow类，作为应用程序的主窗口。
  * 包含界面布局、组件管理、信号连接和事件处理等功能。
- * 
+ *
  * @author CloudArt Team
  * @version 1.0
  * @date 2024
  */
 
 #include "MainWindow.h"
+#include "Components/SidebarControl.h"
 #include "Components/SessionList.h"
 #include "Components/ChatArea.h"
 #include "Components/InputPanel.h"      // 必须包含这个
@@ -20,6 +21,8 @@
 #include "../Network/ComfyApiService.h"  // 新增
 #include "../Core/WorkflowManager.h"
 #include "../Model/DataModels.h"
+#include "Components/HistoryGallery.h" // 【新增】
+#include "Components/ImageViewer.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -41,7 +44,7 @@
 /**
  * @brief 构造函数
  * @param parent 父窗口指针
- * 
+ *
  * 初始化主窗口，设置窗口属性并创建UI界面。
  */
 MainWindow::MainWindow(QWidget *parent)
@@ -52,11 +55,11 @@ MainWindow::MainWindow(QWidget *parent)
     , m_inputPanel(nullptr)
     , m_wfSelector(nullptr)
     , m_refPopup(nullptr)
+    , m_sidebarControl(nullptr)
     , m_leftContainerVisible(true)
     , m_leftContainerOriginalWidth(250) // 默认宽度
     , m_currentPageIndex(0) // 默认显示会话列表
-    , m_historyWindow(nullptr)
-    , m_historyBtn(nullptr)
+    , m_historyGallery(nullptr)
     , m_leftContainerAnimation(nullptr)
     , m_mainLayout(nullptr)
     , m_apiService(nullptr) // 新增
@@ -66,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 /**
  * @brief 析构函数
- * 
+ *
  * Qt会自动清理子控件，无需手动删除。
  */
 MainWindow::~MainWindow()
@@ -75,7 +78,7 @@ MainWindow::~MainWindow()
 
 /**
  * @brief 初始化UI界面
- * 
+ *
  * 创建主窗口的所有UI组件，包括：
  * - 中心部件和主布局
  * - 左侧会话列表
@@ -99,28 +102,33 @@ void MainWindow::setupUi()
 
     // --- 左侧容器堆栈 ---
     m_leftStack = new QStackedWidget(central);
-    
+
     // 添加会话列表页面
     m_sessionList = new SessionList(m_leftStack);
     m_leftStack->addWidget(m_sessionList);
-    
+
     // 添加历史记录页面
-    m_historyWindow = new QWidget(m_leftStack);
-    m_historyWindow->setStyleSheet(
-        "QWidget { "
-        "  background-color: #2A2B32; "
-        "  border-right: 1px solid #40414F; "
-        "}"
-    );
-    m_leftStack->addWidget(m_historyWindow);
-    
+    m_historyGallery = new HistoryGallery(m_leftStack);
+    // 这里不需要手动 setStyleSheet 了，因为组件内部已经写好了
+    m_leftStack->addWidget(m_historyGallery);
+
+    // 连接图库的点击信号 -> 打开大图查看器
+    connect(m_historyGallery, &HistoryGallery::imageClicked, this, [this](const QString& path){
+        QPixmap pix(path);
+        if (!pix.isNull()) {
+            ImageViewer* viewer = new ImageViewer(pix, this);
+            viewer->exec(); // 模态显示
+            delete viewer;
+        }
+    });
+
     // 设置默认显示会话列表
     m_leftStack->setCurrentIndex(0);
-    
+
     // 保存左侧容器的初始宽度，最大不超过250
     m_leftContainerOriginalWidth = 250;
     m_leftStack->setMaximumWidth(250);
-    
+
     m_mainLayout->insertWidget(0, m_leftStack);
 
     // --- 右侧容器 ---
@@ -157,60 +165,20 @@ void MainWindow::setupUi()
     // ---------------------------------------------------------
     // 切换按钮和动画初始化
     // ---------------------------------------------------------
-    
-    // 创建切换按钮
-    m_toggleSessionListBtn = new QToolButton(this);
-    m_toggleSessionListBtn->setIcon(QIcon(":/images/HideConversation.png"));
-    m_toggleSessionListBtn->setIconSize(QSize(24, 24));
-    m_toggleSessionListBtn->setFixedSize(32, 32);
-    m_toggleSessionListBtn->setCursor(Qt::PointingHandCursor);
-    m_toggleSessionListBtn->setStyleSheet(
-        "QToolButton { "
-        "  background-color: #40414F; "
-        "  border: none; "
-        "  border-radius: 4px; "
-        "}"
-        "QToolButton:hover { "
-        "  background-color: #50515F; "
-        "}"
-    );
-    
-    // 设置工具提示
-    m_toggleSessionListBtn->setToolTip("对话记录");
-    
+    // 侧边栏控制组件初始化
+    // ---------------------------------------------------------
+
+    m_sidebarControl = new SidebarControl(this);
+
     // 创建动画效果 - 使用minimumWidth和maximumWidth控制收缩
     m_leftContainerAnimation = new QPropertyAnimation(m_leftStack, "minimumWidth", this);
     m_leftContainerAnimation->setDuration(300); // 300毫秒动画
     m_leftContainerAnimation->setEasingCurve(QEasingCurve::InOutQuad);
-    
-    // 连接按钮点击信号
-    connect(m_toggleSessionListBtn, &QToolButton::clicked,
-            this, &MainWindow::switchToSessionList);
 
-    // ---------------------------------------------------------
-    // 历史记录按钮初始化
-    // ---------------------------------------------------------
-    
-    // 创建历史记录按钮
-    m_historyBtn = new QToolButton(this);
-    m_historyBtn->setIcon(QIcon(":/images/historypic.png"));
-    m_historyBtn->setIconSize(QSize(24, 24));
-    m_historyBtn->setFixedSize(32, 32);
-    m_historyBtn->setCursor(Qt::PointingHandCursor);
-    m_historyBtn->setStyleSheet(
-        "QToolButton { "
-        "  background-color: #40414F; "
-        "  border: none; "
-        "  border-radius: 4px; "
-        "}"
-        "QToolButton:hover { "
-        "  background-color: #50515F; "
-        "}"
-    );
-    m_historyBtn->setToolTip("生成记录");
-    
-    // 连接历史记录按钮点击信号
-    connect(m_historyBtn, &QToolButton::clicked,
+    // 连接按钮点击信号
+    connect(m_sidebarControl->toggleBtn(), &QToolButton::clicked,
+            this, &MainWindow::switchToSessionList);
+    connect(m_sidebarControl->historyBtn(), &QToolButton::clicked,
             this, &MainWindow::switchToHistoryWindow);
 
     // ---------------------------------------------------------
@@ -224,11 +192,11 @@ void MainWindow::setupUi()
     // 2. 点击"参考图(回形针)"按钮 -> 呼出参考图面板
     connect(m_inputPanel->getRefBtn(), &QToolButton::clicked,
             this, &MainWindow::onRefBtnClicked);
-            
+
     // 3. 点击"生成"按钮 -> 处理生成请求
     connect(m_inputPanel, &InputPanel::generateClicked,
             this, &MainWindow::onGenerateClicked);
-            
+
     // 4. 工作流选择器选中工作流 -> 更新界面状态
     connect(m_wfSelector, &WorkflowSelector::workflowSelected,
             this, &MainWindow::onWorkflowSelected);
@@ -248,7 +216,7 @@ void MainWindow::setupUi()
     m_inputPanel->updateState(WorkflowType::TextToImage);
 
     // =========================================================
-    // 【修复代码】初始化悬浮按钮的位置
+    // 【修复代码】初始化侧边栏控制组件的位置
     // =========================================================
 
     // 1. 强制设置初始位置。
@@ -256,27 +224,19 @@ void MainWindow::setupUi()
     // 已知的 m_leftContainerOriginalWidth (250) 来计算，确保软件一启动按钮就在正确位置。
     if (m_leftContainerVisible) {
         int initialBtnX = m_leftContainerOriginalWidth + 10;
-        m_toggleSessionListBtn->move(initialBtnX, 10);
-
-        // 历史按钮在切换按钮下方
-        int historyBtnY = 10 + m_toggleSessionListBtn->height() + 10;
-        m_historyBtn->move(initialBtnX, historyBtnY);
+        m_sidebarControl->move(initialBtnX, 10);
     } else {
-        m_toggleSessionListBtn->move(10, 10);
-        int historyBtnY = 10 + m_toggleSessionListBtn->height() + 10;
-        m_historyBtn->move(10, historyBtnY);
+        m_sidebarControl->move(10, 10);
     }
 
     // 2. 确保按钮在所有控件的最上层（防止被 Sidebar 遮挡）
-    m_toggleSessionListBtn->raise();
-    m_historyBtn->raise();
+    m_sidebarControl->raise();
 
     // 3. 使用 0ms 定时器进行二次校准
     // 这是一个 Qt 常用技巧：0ms 定时器会在当前事件循环结束后（即界面显示、布局计算完成后）立刻执行。
-    // 这样能确保 updateToggleButtonPosition 获取到的是 Layout 计算后的真实坐标。
+    // 这样能确保 updateSidebarPosition 获取到的是 Layout 计算后的真实坐标。
     QTimer::singleShot(0, this, [this](){
-        updateToggleButtonPosition();
-        updateHistoryButtonPosition();
+        updateSidebarPosition();
     });
 
     // ---------------------------------------------------------
@@ -564,7 +524,7 @@ void MainWindow::setupUi()
 
 /**
  * @brief 工作流按钮点击事件处理
- * 
+ *
  * 当用户点击工作流选择按钮时，弹出工作流选择器窗口。
  * 窗口位置自动计算在按钮上方居中显示。
  */
@@ -579,7 +539,7 @@ void MainWindow::onWorkflowBtnClicked() {
 
 /**
  * @brief 参考图按钮点击事件处理
- * 
+ *
  * 当用户点击参考图按钮时，切换参考图选择窗口的显示和隐藏状态。
  * 如果窗口已显示，则隐藏；如果窗口已隐藏，则显示。
  */
@@ -600,7 +560,7 @@ void MainWindow::onRefBtnClicked() {
 /**
  * @brief 工作流选择事件处理
  * @param info 选中的工作流信息
- * 
+ *
  * 当用户从工作流选择器中选择工作流时，更新输入面板状态。
  * 根据工作流类型启用或禁用相关功能按钮。
  */
@@ -611,14 +571,14 @@ void MainWindow::onWorkflowSelected(const WorkflowInfo& info)
 
     // 【新增】记录当前类型，供生成时使用
     m_currentWorkflowType = info.type;
-    
+
     qDebug() << "切换到工作流:" << info.name << " (ID:" << info.id << ")";
 }
 
 /**
  * @brief 生成按钮点击事件处理
  * @param prompt 用户输入的提示词
- * 
+ *
  * 当用户点击生成按钮时，处理生成请求。
  * 只有在输入框有内容时才会触发此信号。
  * 首先在聊天区域添加用户对话，然后处理生成逻辑。
@@ -725,7 +685,7 @@ void MainWindow::onGenerateClicked(const QString& prompt)
 
 /**
  * @brief 切换左侧容器显示状态
- * 
+ *
  * 当左侧容器不在场时，呼出容器；
  * 当左侧容器在场时，收起容器。
  */
@@ -736,146 +696,123 @@ void MainWindow::onToggleLeftContainer()
         m_leftContainerAnimation->setStartValue(m_leftStack->width());
         m_leftContainerAnimation->setEndValue(0);
         m_leftContainerAnimation->start();
-        
+
         // 设置maximumWidth为0，确保完全隐藏
         m_leftStack->setMaximumWidth(0);
-        
+
         m_leftContainerVisible = false;
-        // 工具提示保持固定文本"对话记录"和"生成记录"
-        
-        // 更新按钮位置
+
+        // 更新侧边栏位置
         QTimer::singleShot(300, this, [this]() {
-            updateToggleButtonPosition();
-            updateHistoryButtonPosition();
+            updateSidebarPosition();
         });
     } else {
         // 呼出左侧容器 - 向右动画恢复到原始宽度
         // 设置最大宽度限制为250
         m_leftStack->setMaximumWidth(250);
-        
+
         // 使用保存的初始宽度
         m_leftContainerAnimation->setStartValue(0);
         m_leftContainerAnimation->setEndValue(m_leftContainerOriginalWidth);
         m_leftContainerAnimation->start();
-        
+
         m_leftContainerVisible = true;
-        // 工具提示保持固定文本"对话记录"和"生成记录"
-        
-        // 更新按钮位置
+
+        // 更新侧边栏位置
         QTimer::singleShot(300, this, [this]() {
-            updateToggleButtonPosition();
-            updateHistoryButtonPosition();
+            updateSidebarPosition();
         });
     }
 }
 
 /**
- * @brief 更新切换按钮位置
- * 
- * 根据左侧容器的显示状态，调整切换按钮的位置。
- * 左侧容器显示时按钮在容器右侧上方，左侧容器隐藏时按钮在窗口左上角。
+ * @brief 更新侧边栏位置
+ *
+ * 根据左侧容器的显示状态，调整侧边栏的位置。
+ * 左侧容器显示时侧边栏在容器右侧上方，左侧容器隐藏时侧边栏在窗口左上角。
  */
-void MainWindow::updateToggleButtonPosition()
+void MainWindow::updateSidebarPosition()
 {
     if (m_leftContainerVisible) {
-        // 左侧容器显示时，按钮在容器右侧上方
+        // 左侧容器显示时，侧边栏在容器右侧上方
         // 使用容器的实际宽度来计算位置
         int containerWidth = m_leftStack->width();
         if (containerWidth <= 0) {
             containerWidth = 250; // 默认宽度
         }
-        // 按钮放在容器右侧，距离容器右边框10像素
+        // 侧边栏放在容器右侧，距离容器右边框10像素
         QPoint pos = m_leftStack->mapToParent(QPoint(containerWidth + 10, 10));
-        m_toggleSessionListBtn->move(pos);
+        m_sidebarControl->move(pos);
     } else {
-        // 左侧容器隐藏时，按钮在窗口左上角
-        m_toggleSessionListBtn->move(10, 10);
+        // 左侧容器隐藏时，侧边栏在窗口左上角
+        m_sidebarControl->move(10, 10);
     }
-    
-    m_toggleSessionListBtn->raise(); // 确保按钮在最上层
+
+    m_sidebarControl->raise(); // 确保侧边栏在最上层
+}
+
+/**
+ * @brief 切换左侧面板
+ * @param targetIndex 目标页面索引
+ */
+void MainWindow::switchLeftPanel(int targetIndex)
+{
+    if (!m_leftContainerVisible) {
+        // 左侧容器不在场，先呼出容器
+        onToggleLeftContainer();
+        // 设置当前页面为目标页面
+        m_leftStack->setCurrentIndex(targetIndex);
+        m_currentPageIndex = targetIndex;
+    } else if (m_currentPageIndex != targetIndex) {
+        // 左侧容器在场但当前不是目标页面，切换到目标页面
+        m_leftStack->setCurrentIndex(targetIndex);
+        m_currentPageIndex = targetIndex;
+    } else {
+        // 左侧容器在场且当前是目标页面，收起容器
+        onToggleLeftContainer();
+    }
 }
 
 /**
  * @brief 窗口大小改变事件处理
  * @param event 窗口大小改变事件
- * 
- * 当窗口大小改变时，更新切换按钮的位置。
+ *
+ * 当窗口大小改变时，更新侧边栏的位置。
  */
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
     QMainWindow::resizeEvent(event);
-    updateToggleButtonPosition();
-    updateHistoryButtonPosition();
+    updateSidebarPosition();
 }
 
 /**
  * @brief 切换到会话列表页面
- * 
+ *
  * 当左侧容器不在场时，呼出容器并显示会话列表；
  * 当左侧容器在场时，切换到会话列表页面。
  */
 void MainWindow::switchToSessionList()
 {
-    if (!m_leftContainerVisible) {
-        // 左侧容器不在场，先呼出容器
-        onToggleLeftContainer();
-        // 设置当前页面为会话列表
-        m_leftStack->setCurrentIndex(0);
-        m_currentPageIndex = 0;
-    } else if (m_currentPageIndex != 0) {
-        // 左侧容器在场但当前不是会话列表，切换到会话列表
-        m_leftStack->setCurrentIndex(0);
-        m_currentPageIndex = 0;
-        // 工具提示保持固定文本"对话记录"和"生成记录"
-    } else {
-        // 左侧容器在场且当前是会话列表，收起容器
-        onToggleLeftContainer();
-    }
+    switchLeftPanel(0);
 }
 
 /**
  * @brief 切换到历史记录页面
- * 
+ *
  * 当左侧容器不在场时，呼出容器并显示历史记录；
  * 当左侧容器在场时，切换到历史记录页面。
  */
 void MainWindow::switchToHistoryWindow()
 {
-    if (!m_leftContainerVisible) {
-        // 左侧容器不在场，先呼出容器
-        onToggleLeftContainer();
-        // 设置当前页面为历史记录
-        m_leftStack->setCurrentIndex(1);
-        m_currentPageIndex = 1;
-    } else if (m_currentPageIndex != 1) {
-        // 左侧容器在场但当前不是历史记录，切换到历史记录
-        m_leftStack->setCurrentIndex(1);
-        m_currentPageIndex = 1;
-        // 工具提示保持固定文本"对话记录"和"生成记录"
-    } else {
-        // 左侧容器在场且当前是历史记录，收起容器
-        onToggleLeftContainer();
+    // 1. 切换界面
+    switchLeftPanel(1);
+
+    // 2. 每次切换过来时，刷新数据
+    // 这样刚生成的图也能立刻看到
+    if (m_leftStack->currentIndex() == 1) {
+        m_historyGallery->loadImages();
     }
 }
-
-/**
- * @brief 更新历史按钮位置
- * 
- * 历史按钮始终位于切换按钮的下方，保持与切换按钮相同的水平位置。
- */
-void MainWindow::updateHistoryButtonPosition()
-{
-    // 历史按钮位于切换按钮的下方
-    QPoint togglePos = m_toggleSessionListBtn->pos();
-    int buttonHeight = m_toggleSessionListBtn->height();
-    
-    // 历史按钮放在切换按钮下方，保持相同的水平位置
-    QPoint pos = QPoint(togglePos.x(), togglePos.y() + buttonHeight + 10);
-    m_historyBtn->move(pos);
-    
-    m_historyBtn->raise(); // 确保按钮在最上层
-}
-
 
 void MainWindow::setJobRunning(bool running)
 {
@@ -895,8 +832,8 @@ void MainWindow::setJobRunning(bool running)
 
     // 3. 【新增】锁定左上角的切换按钮和历史按钮
     // 防止用户在生成时把侧边栏收起来，或者跳到历史记录页
-    if (m_toggleSessionListBtn) m_toggleSessionListBtn->setEnabled(!running);
-    if (m_historyBtn) m_historyBtn->setEnabled(!running);
+    if (m_sidebarControl->toggleBtn()) m_sidebarControl->toggleBtn()->setEnabled(!running);
+    if (m_sidebarControl->historyBtn()) m_sidebarControl->historyBtn()->setEnabled(!running);
 
 }
 
@@ -944,32 +881,47 @@ void MainWindow::onInterrogateClicked()
 
 void MainWindow::loadSessionList()
 {
-    // 1. 从数据库查数据
+    // 1. 从数据库查数据 (通常是按时间倒序，最新的在第0个)
     QVector<SessionData> sessions = DatabaseManager::instance().getAllSessions();
 
-    // 2. 刷新 UI
+    // 2. 刷新左侧 UI
     m_sessionList->loadSessions(sessions);
 
-    // 3. 如果有历史会话，默认选中第一个 (最新的)
-    // 也可以不做，留空
+    // 3. 【核心逻辑】初始化选中状态
+    if (!sessions.isEmpty()) {
+        // --- 情况 A: 数据库里有历史记录 ---
+
+        // 获取最新的会话 ID (即列表第一个)
+        int firstId = sessions.first().id;
+
+        // 1. 让左侧列表视觉上选中它
+        m_sessionList->selectSession(firstId);
+
+        // 2. 让右侧聊天区加载它的历史记录
+        loadSessionHistory(firstId);
+
+        // 3. 确保当前会话 ID 被正确记录 (双重保险)
+        m_chatArea->setCurrentSessionId(firstId);
+    }
+    else {
+        // --- 情况 B: 第一次安装软件，或者是空的 ---
+        qDebug() << "数据库为空，自动创建新会话...";
+        createNewSession();
+        // createNewSession 内部会自动刷新列表并选中新建的那个，
+        // 所以这里不需要再写额外的加载逻辑
+    }
 }
 
 void MainWindow::createNewSession()
 {
-    // 1. 数据库插入
     int newId = DatabaseManager::instance().createSession("新会话");
-
     if (newId != -1) {
-        // 2. 刷新左侧列表 (把新会话显示出来)
-        // 这一步很重要，否则左侧列表里没有这个新会话
+        // 刷新列表
         loadSessionList();
+        // 注意：loadSessionList 刚才被我们改过了。
+        // 因为现在有了新会话，它会进入 "情况 A"，自动选中这个新 ID。
+        // 所以这里不需要再手动 loadSessionHistory 了，逻辑闭环了。
 
-        // 3. 加载这个新会话
-        // loadSessionHistory 内部已经做了 clear() 和 setCurrentSessionId(newId)
-        // 并且因为是新会话，数据库没消息，它加载出来就是空的
-        loadSessionHistory(newId);
-
-        // 4. 确保左侧栏可见
         if (!m_leftContainerVisible) onToggleLeftContainer();
     }
 }

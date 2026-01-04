@@ -197,3 +197,21 @@ QVector<MessageData> DatabaseManager::getMessages(int sessionId)
     }
     return list;
 }
+
+
+QVector<QString> DatabaseManager::getAllAiImages()
+{
+    QVector<QString> list;
+    QSqlQuery query;
+    // 查询所有 role 为 'ai' 且 image_path 不为空的记录，按时间倒序排列
+    query.prepare("SELECT image_path FROM tb_messages WHERE role = 'ai' AND image_path != '' ORDER BY timestamp DESC");
+
+    if (query.exec()) {
+        while (query.next()) {
+            list.append(query.value("image_path").toString());
+        }
+    } else {
+        qDebug() << "❌ 查询历史图片失败:" << query.lastError();
+    }
+    return list;
+}

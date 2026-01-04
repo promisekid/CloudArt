@@ -2,16 +2,23 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QActionGroup>
+#include <QScrollBar> // 引入滚动条头文件以便美化
+#include <QKeyEvent>
 
 InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     m_currentResolution = QSize(1024, 1024);
 
-    this->setFixedHeight(120);
-    this->setStyleSheet("background-color: #343541; border-top: 1px solid #5D5D67;");
+    // 设置底部面板的背景和边框
+    this->setStyleSheet("InputPanel { background-color: #343541; border-top: 1px solid #5D5D67; }");
+
+    // 设置一个合理的初始高度策略
+    this->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(20, 20, 20, 20); // 调整边距
-    layout->setSpacing(15); // 控件间距
+    // 对齐方式设为 Bottom，这样当输入框变高时，按钮保持在底部对齐（可选，看你喜好）
+    layout->setAlignment(Qt::AlignBottom);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(15);
 
     // 1. [新增] 参考图按钮 (使用 QToolButton)
     m_btnRef = new QToolButton(this);
@@ -66,44 +73,125 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     );
     layout->addWidget(m_btnWorkflow);
 
-    // 3. 真正的输入框 (替换模拟的QLabel)
-    m_inputEdit = new QLineEdit(this);
-    m_inputEdit->setPlaceholderText("输入提示词...");
+    m_inputEdit = new QPlainTextEdit(this);
+    m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+
+    // 设置初始样式
     m_inputEdit->setStyleSheet(
-        "QLineEdit { background-color: #40414F; color: white; border: 1px solid #555; border-radius: 4px; padding: 0 10px; }"
-        "QLineEdit:focus { border-color: #19C37D; }"
-        "QLineEdit::placeholder { color: #CCC; }"
-    );
+        "QPlainTextEdit { "
+        "   background-color: #40414F; "
+        "   color: white; "
+        "   border: 1px solid #555; "
+        "   border-radius: 4px; "
+        "   padding: 8px; " // 内边距大一点更好看
+        "   font-size: 14px; "
+        "}"
+        "QPlainTextEdit:focus { border-color: #19C37D; }"
+
+        // 隐藏/美化滚动条 (和之前 HistoryGallery 类似)
+        "QScrollBar:vertical { width: 8px; background: transparent; }"
+        "QScrollBar::handle:vertical { background: #666; border-radius: 4px; }"
+        );
+
+    // 初始高度设为一行的高度 (约40px)
     m_inputEdit->setFixedHeight(40);
-    m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed); // 只有它会伸缩
+    m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // 安装事件过滤器 (用于拦截回车)
+    m_inputEdit->installEventFilter(this);
+
+    // 监听文字变化，自动调整高度
+    connect(m_inputEdit, &QPlainTextEdit::textChanged, this, &InputPanel::adjustInputHeight);
+
     layout->addWidget(m_inputEdit);
 
     // 4. 生成按钮
     m_btnGenerate = new QPushButton("生成", this);
-    m_btnGenerate->setFixedSize(80, 40);
+    m_btnGenerate->setFixedSize(80, 40); // 按钮高度固定
     m_btnGenerate->setStyleSheet(
         "QPushButton { background-color: #19C37D; color: white; border-radius: 4px; font-weight: bold; }"
         "QPushButton:hover { background-color: #1AD48A; }"
-    );
+        "QPushButton:disabled { background-color: #2A2B32; color: #888; }"
+        );
     layout->addWidget(m_btnGenerate);
 
-    // 连接信号槽
+    // 连接信号
     connect(m_btnGenerate, &QPushButton::clicked, this, &InputPanel::onGenerateClicked);
-    
-    // 连接回车键信号
-    connect(m_inputEdit, &QLineEdit::returnPressed, this, &InputPanel::onGenerateClicked);
+
 }
 
 
 
-void InputPanel::onGenerateClicked() {
-    QString prompt = m_inputEdit->text().trimmed();
-    if (!prompt.isEmpty()) {
-        emit generateClicked(prompt);
-        // 清空输入框
-        m_inputEdit->clear();
+bool InputPanel::eventFilter(QObject *obj, QEvent *e)
+{
+    if (obj == m_inputEdit && e->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(e);
+
+        // 如果按下的是 Enter (Key_Return)
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            // 检查是否按下了 Shift
+            if (keyEvent->modifiers() & Qt::ShiftModifier) {
+                // Shift + Enter -> 允许换行 (默认行为，不做处理，返回 false 让控件自己处理)
+                return false;
+            } else {
+                // 单独按 Enter -> 发送消息
+                onGenerateClicked();
+                return true; // 事件已处理，不再传递给控件(防止产生换行)
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, e);
+}
+
+// 【新增】自动调整高度逻辑
+void InputPanel::adjustInputHeight()
+{
+    QTextDocument *doc = m_inputEdit->document();
+    // 调整文档布局宽度以匹配控件宽度 (防止换行计算错误)
+    doc->setTextWidth(m_inputEdit->viewport()->width());
+
+    // 计算内容总高度
+    int contentHeight = doc->size().height();
+
+    // 加上上下的 padding (CSS里设置了 padding: 8px，上下加起来约16，微调一下)
+    int margins = 16;
+    int totalHeight = contentHeight + margins;
+
+    // 设定限制
+    int minHeight = 40;  // 1行的高度
+    int maxHeight = 120; // 约 4-5 行的高度
+
+    // 限制在 min 和 max 之间
+    int finalHeight = qBound(minHeight, totalHeight, maxHeight);
+
+    if (m_inputEdit->height() != finalHeight) {
+        m_inputEdit->setFixedHeight(finalHeight);
+
+        // 如果你的 InputPanel 之前设置了 fixedHeight，这里需要让父控件也 updateGeometry
+        // 因为我们去掉了 setFixedHeight，这里会自动触发布局重算
+    }
+
+    // 只有当内容超过最大高度时，才显示垂直滚动条
+    if (totalHeight > maxHeight) {
+        m_inputEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    } else {
+        m_inputEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 }
+
+void InputPanel::onGenerateClicked() {
+    // 获取纯文本
+    QString prompt = m_inputEdit->toPlainText().trimmed();
+    if (!prompt.isEmpty()) {
+        emit generateClicked(prompt);
+        // 清空并重置高度
+        m_inputEdit->clear();
+        adjustInputHeight();
+    }
+}
+
+
+
 
 
 void InputPanel::setupRatioMenu()
@@ -152,15 +240,28 @@ void InputPanel::onRatioSelected(QAction* action)
 }
 
 void InputPanel::updateState(WorkflowType type) {
-    // 只有文生图才允许调整分辨率
-    // 图生图通常跟随参考图比例 (或者你也想强制改)
     if (type == WorkflowType::TextToImage) {
+        // --- 文生图模式 ---
+        // 1. 禁用参考图上传（因为纯文生图不需要）
         m_btnRef->setEnabled(false);
-        m_btnRatio->setEnabled(true);  // 启用比例
+
+        // 2. 启用画幅比例选择
+        m_btnRatio->setEnabled(true);
+
+        // 3. 【新增】禁用反推按钮（因为没有图片可以反推）
+        if (m_btnInterrogate) m_btnInterrogate->setEnabled(false);
+
     } else {
+        // --- 图生图/其他模式 ---
+        // 1. 启用参考图上传
         m_btnRef->setEnabled(true);
-        m_btnRatio->setEnabled(false); // 禁用比例 (假设图生图用 SmartResize 自动控制)
+
+        // 2. 禁用画幅比例（通常跟随原图尺寸）
+        m_btnRatio->setEnabled(false);
         m_btnRatio->setText("Auto");
+
+        // 3. 【新增】启用反推按钮
+        if (m_btnInterrogate) m_btnInterrogate->setEnabled(true);
     }
 }
 
@@ -169,19 +270,24 @@ QSize InputPanel::currentResolution() const {
 }
 
 
+
+// setLocked 函数也要修改一下，因为控件类型变了
 void InputPanel::setLocked(bool locked)
 {
     bool enabled = !locked;
 
-    // 1. 禁用所有功能按钮
-    m_btnRef->setEnabled(enabled);          // 参考图
-    m_btnInterrogate->setEnabled(enabled);  // 反推
-    m_btnRatio->setEnabled(enabled);        // 比例
-    m_btnWorkflow->setEnabled(enabled);     // 工作流
+    m_btnRef->setEnabled(enabled);
+    m_btnInterrogate->setEnabled(enabled);
+    m_btnRatio->setEnabled(enabled);
+    m_btnWorkflow->setEnabled(enabled);
 
-    // 2. 禁用输入框
+    // QPlainTextEdit 也有 setEnabled，或者用 setReadOnly
     m_inputEdit->setEnabled(enabled);
+    if (locked) {
+        m_inputEdit->setPlaceholderText("生成中，请稍候...");
+    } else {
+        m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+    }
 
-    // 3. 禁用生成按钮
     m_btnGenerate->setEnabled(enabled);
 }

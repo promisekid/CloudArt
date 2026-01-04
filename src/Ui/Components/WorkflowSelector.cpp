@@ -33,10 +33,8 @@ WorkflowSelector::WorkflowSelector(QWidget* parent) : QWidget(parent) {
     setAttribute(Qt::WA_TranslucentBackground);
     
     // 初始化测试工作流数据
-    m_workflows.append(WorkflowInfo(1, "文生图", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "基础生成模式，从文字创建图像", WorkflowType::TextToImage));
-    m_workflows.append(WorkflowInfo(2, "图生图", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "基于参考图生成新图像", WorkflowType::ImageToImage));
-    m_workflows.append(WorkflowInfo(3, "局部重绘", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "对图像局部区域进行重绘", WorkflowType::Inpaint));
-    m_workflows.append(WorkflowInfo(4, "图像放大", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "提升图像分辨率和细节", WorkflowType::Upscale));
+    m_workflows.append(WorkflowInfo(1, "文生图", ":/images/文生图演示.png", ":/images/文生图演示.gif", "基础生成模式，从文字创建图像", WorkflowType::TextToImage));
+    m_workflows.append(WorkflowInfo(2, "图生图", ":/images/图生图演示.png", ":/images/图生图演示.gif", "基于参考图生成新图像", WorkflowType::ImageToImage));
     
     setupUi();
 }

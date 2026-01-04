@@ -21,6 +21,8 @@ set(SOURCES
     Network/ComfyApiService.cpp
 
     # Components
+    Ui/Components/SidebarControl.h
+    Ui/Components/SidebarControl.cpp
     Ui/Components/SessionList.h
     Ui/Components/SessionList.cpp
     Ui/Components/ChatArea.h
@@ -39,6 +41,8 @@ set(SOURCES
     Ui/Components/ChatBubble.cpp
     Ui/Components/ImageViewer.h
     Ui/Components/ImageViewer.cpp
+    Ui/Components/HistoryGallery.h
+    Ui/Components/HistoryGallery.cpp
     ../resources/resources.qrc
 )
 

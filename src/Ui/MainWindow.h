@@ -32,6 +32,8 @@ class QToolButton;
 class ComfyApiService;
 class WorkflowManager;
 class ChatBubble;
+class SidebarControl;
+class HistoryGallery;
 
 /**
  * @brief 主窗口类
@@ -110,20 +112,21 @@ private:
     void setupUi();
 
     /**
-     * @brief 更新切换按钮位置
+     * @brief 更新侧边栏位置
      */
-    void updateToggleButtonPosition();
-    
-    /**
-     * @brief 更新历史记录按钮位置
-     */
-    void updateHistoryButtonPosition();
+    void updateSidebarPosition();
 
     // 【新增】加载所有历史会话
     void loadSessionList();
 
     // 【新增】创建新会话的逻辑
     void createNewSession();
+
+    /**
+     * @brief 切换左侧面板
+     * @param targetIndex 目标页面索引
+     */
+    void switchLeftPanel(int targetIndex);
 
     QString saveImageToLocal(const QPixmap& img);
 
@@ -141,17 +144,13 @@ private:
     ReferencePopup* m_refPopup; ///< 参考图上传面板组件
 
     // 切换按钮和动画
-    QToolButton* m_toggleSessionListBtn; ///< 切换对话栏显示状态的按钮
+    SidebarControl* m_sidebarControl; ///< 侧边栏控制组件
     QPropertyAnimation* m_leftContainerAnimation; ///< 左侧容器动画效果
     bool m_leftContainerVisible; ///< 左侧容器是否可见
     int m_leftContainerOriginalWidth; ///< 左侧容器的初始宽度
     int m_currentPageIndex; ///< 当前显示的页面索引
     
-    /** 历史记录窗口 */
-    QWidget* m_historyWindow;
-    
-    /** 历史记录按钮 */
-    QToolButton* m_historyBtn;
+    HistoryGallery* m_historyGallery; // 【新增】新的类型
     
     /** 主布局 */
     QHBoxLayout* m_mainLayout;

@@ -40,6 +40,9 @@ public:
     // 获取某个会话的所有消息 (用于点击会话后加载历史)
     QVector<MessageData> getMessages(int sessionId);
 
+    // 【新增】获取所有生成的图片路径（按时间倒序）
+    QVector<QString> getAllAiImages();
+
 private:
     explicit DatabaseManager(QObject *parent = nullptr);
     ~DatabaseManager();

@@ -16,6 +16,7 @@
 #include <QToolButton> // 使用 ToolButton 做纯图标按钮更合适
 #include <QLineEdit>
 #include <QMenu>
+#include <QPlainTextEdit>
 #include "../../Model/WorkflowTypes.h"
 
 /**
@@ -55,7 +56,7 @@ public:
      * @brief 获取输入框
      * @return QLineEdit* 输入框指针
      */
-    QLineEdit* getInputEdit() const { return m_inputEdit; }
+    QPlainTextEdit* getInputEdit() const { return m_inputEdit; }
 
     /**
      * @brief 根据工作流类型更新UI状态
@@ -82,6 +83,10 @@ signals:
     // 【新增】比例改变信号（可选，如果MainWindow需要立即知道）
     void resolutionChanged(int w, int h);
 
+protected:
+    // 【新增】重写事件过滤器，处理回车键
+    bool eventFilter(QObject *obj, QEvent *e) override;
+
 private slots:
     /**
      * @brief 处理生成按钮点击
@@ -90,6 +95,9 @@ private slots:
 
     // 【新增】处理比例选择
     void onRatioSelected(QAction* action);
+
+    // 【新增】文本变化时调整高度
+    void adjustInputHeight();
 
 private:
     void setupRatioMenu(); // 初始化菜单
@@ -103,7 +111,7 @@ private:
     QMenu* m_ratioMenu;
     QSize m_currentResolution; // 当前选中的分辨率
 
-    QLineEdit* m_inputEdit;
+    QPlainTextEdit* m_inputEdit;
     QPushButton* m_btnGenerate;
 
     QToolButton* m_btnInterrogate; // 【新增】

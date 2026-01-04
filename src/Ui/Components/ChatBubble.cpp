@@ -206,42 +206,56 @@ bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
         QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
 
         if (mouseEvent->button() == Qt::LeftButton) {
-            if (!m_currentImage.isNull()) showViewer(); // 只有有图才能看
+            if (!m_currentImage.isNull()) showViewer(); // 左键看大图
             return true;
         }
         else if (mouseEvent->button() == Qt::RightButton) {
-            // 右键菜单
+            // --- 右键菜单逻辑开始 ---
             QMenu menu;
+            // 统一深色风格
             menu.setStyleSheet(
                 "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
                 "QMenu::item { padding: 5px 20px; }"
                 "QMenu::item:selected { background-color: #40414F; }"
                 );
 
+            // 只要有图片，就显示这三个雷打不动的选项
             if (!m_currentImage.isNull()) {
+
+                // 1. 复制
                 QAction* actCopy = menu.addAction("❐ 复制图片");
                 connect(actCopy, &QAction::triggered, this, [=](){
                     QClipboard *clipboard = QApplication::clipboard();
                     clipboard->setPixmap(m_currentImage);
                 });
 
+                // 2. 另存为
                 QAction* actSave = menu.addAction("💾 另存为...");
                 connect(actSave, &QAction::triggered, this, &ChatBubble::saveImage);
 
                 menu.addSeparator();
 
-                // 【新增】只有当服务器文件名存在时，才显示高清修复
-                if (!m_serverFileName.isEmpty()) {
-                    QAction* actUpscale = menu.addAction("✨ 高清修复 (1.5x)");
-                    connect(actUpscale, &QAction::triggered, this, [=](){
-                        // 修改：把图片也发出去
-                        emit upscaleRequested(m_serverFileName, m_currentImage);
-                    });
-                }
+                // 3. 高清修复 (无条件显示)
+                // 即使是历史记录或用户发的图，只要它是张图，就能点这个
+                QAction* actUpscale = menu.addAction("✨ 高清修复 (1.5x)");
+                connect(actUpscale, &QAction::triggered, this, [=](){
+                    // 发送信号
+                    // 如果 m_serverFileName 为空也没关系，MainWindow 会负责重新上传 m_currentImage
+                    emit upscaleRequested(m_serverFileName, m_currentImage);
+                });
+            }
+
+            // 如果是纯文本气泡，逻辑保持不变 (复制文字)
+            else if (m_contentLabel && !m_contentLabel->text().isEmpty()) {
+                QAction* actCopyText = menu.addAction("📋 复制内容");
+                connect(actCopyText, &QAction::triggered, [=](){
+                    QApplication::clipboard()->setText(m_contentLabel->text());
+                });
             }
 
             menu.exec(mouseEvent->globalPosition().toPoint());
             return true;
+            // --- 右键菜单逻辑结束 ---
         }
     }
     return QWidget::eventFilter(watched, event);

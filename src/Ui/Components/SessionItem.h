@@ -57,6 +57,8 @@ public:
      */
     void setTitle(const QString& newTitle);
 
+
+
 signals:
     /**
      * @brief 项点击信号

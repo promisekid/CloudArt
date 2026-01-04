@@ -56,11 +56,39 @@ void SessionList::setupUi()
 
     // 美化滚动条 (QSS) - 这一大段是为了让滚动条变细、变深色
     scrollArea->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollBar:vertical { border: none; background: #202123; width: 8px; margin: 0px; }"
-        "QScrollBar::handle:vertical { background: #4D4D4F; min-height: 20px; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+        "QScrollArea { "
+        "   background: transparent; "
+        "   border: none; "
+        "}"
+
+        // --- 滚动条轨道 (槽) ---
+        "QScrollBar:vertical { "
+        "    border: none; "
+        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
+        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    margin: 0px; "
+        "}"
+
+        // --- 滚动滑块 (那个拖动的块) ---
+        "QScrollBar::handle:vertical { "
+        "    background: #666666; "  // 明显的灰色
+        "    min-height: 30px; "     // 最小高度设大一点
+        "    border-radius: 7px; "   // 圆角
+        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "}"
+
+        // --- 鼠标悬停变亮 ---
+        "QScrollBar::handle:vertical:hover { "
+        "    background: #999999; "  // 悬停变白一点
+        "}"
+
+        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
+        "    height: 0px; "
+        "}"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { "
+        "    background: none; "
+        "}"
         );
 
     // 5. 创建滚动区域内部的“容器画布”
@@ -154,4 +182,26 @@ void SessionList::loadSessions(const QVector<SessionData>& sessions)
     for (const auto& s : sessions) {
         addSession(s.id, s.name);
     }
+}
+
+void SessionList::selectSession(int id)
+{
+    // 遍历所有 Item 找到匹配的 ID
+    for (SessionItem* item : m_items) {
+        if (item->id() == id) {
+            handleItemSelection(item); // 调用内部函数设置高亮样式
+            // 注意：这里我们只改变样式，不发送信号，避免死循环
+            // 数据的加载由 MainWindow 主动调用 loadSessionHistory
+            return;
+        }
+    }
+}
+
+int SessionList::getFirstSessionId() const
+{
+    if (m_items.isEmpty()) return -1;
+    // 因为是垂直布局，且 addSession 是 append 到布局末尾
+    // 但数据源通常是倒序的（最新的在前面），所以列表的第一个就是最新的
+    // 这里的 0 索引对应 UI 上最顶部的元素
+    return m_items.first()->id();
 }

@@ -1,7 +1,7 @@
 # CloudArt - 一款基于 Qt/C++ 的 AI 绘图桌面客户端
 
 <p align="center">
-  <img src="resources/images/文生图演示.gif" alt="CloudArt Demo" width="800"/>
+  <img src="resources/images/主界面展示.png" alt="CloudArt Demo" width="800"/>
 </p>
 
 <p align="center">
@@ -69,10 +69,53 @@ CloudArt/
 
 ## 🎬 演示 (Demo)
 
+<p align="center">
+  <em>现代化的会话式交互界面，所有创作历史一目了然。</em>
+</p>
+<p align="center">
+  <img src="resources/images/主界面展示.png" alt="主界面" width="800"/>
+</p>
+
+<br>
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <p><em>支持多种AI工作流动态切换，悬浮式卡片设计与GIF预览提供了直观的交互体验。</em></p>
+      <img src="resources/images/工作流展示.gif" alt="工作流选择" width="380">
+    </td>
+    <td align="center">
+      <p><em>所有AI生成的作品都会自动归档到历史画廊，方便用户随时回顾、查找和管理。</em></p>
+      <img src="resources/images/生成记录展示.png" alt="历史记录" width="380">
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <br>
+      <p><em>对生成的图片提供丰富的上下文操作，包括大图预览、复制、保存以及一键发起“高清修复”等衍生工作流。</em></p>
+      <img src="resources/images/高清修复演示.gif" alt="图片交互" width="600">
+    </td>
+  </tr>
+</table>
+
+## ✨ 核心功能演示
+
+### 1. 文生图 (Text-to-Image)
+通过简单的文字描述，即可快速生成高质量的AI图像。整个过程异步执行，支持实时进度反馈，保证了流畅的用户体验。
 
 <p align="center">
-  <img src="resources/images/文生图演示.gif" alt="Screenshot 1" width="400"/>
-  <img src="resources/images/图生图演示.gif" alt="Screenshot 2" width="400"/>
+  <img src="resources/images/文生图演示.gif" alt="Text-to-Image Demo" width="800"/>
 </p>
+
+### 2. 图生图 (Image-to-Image)
+上传一张参考图片，结合新的提示词，对图像的风格、内容进行重新创作。客户端内置了完善的图片上传与管理功能。
+
+<p align="center">
+  <img src="resources/images/图生图演示.gif" alt="Image-to-Image Demo" width="800"/>
+</p>
+
+
+---
+*Powered by C++ & Qt with ❤️*
 
 

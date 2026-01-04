@@ -73,6 +73,9 @@ public:
     // 【新增】锁定/解锁面板所有控件
     void setLocked(bool locked);
 
+    // 【新增】设置连接状态 (专门用于网络断开时的锁定)
+    void setConnectionStatus(bool isConnected);
+
 signals:
     /**
      * @brief 生成按钮点击信号

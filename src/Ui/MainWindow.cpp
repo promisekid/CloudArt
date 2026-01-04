@@ -40,6 +40,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QDateTime>
+#include <QSettings>
 
 /**
  * @brief 构造函数
@@ -243,17 +244,42 @@ void MainWindow::setupUi()
     // API服务初始化
     // ---------------------------------------------------------
 
-    // 初始化服务
+    // --- 找到最后初始化 m_apiService 的地方 ---
+
     m_apiService = new ComfyApiService(this);
 
-    // 监听连接状态 (为了测试)
-    connect(m_apiService, &ComfyApiService::serverConnected, this, [](){
-        qDebug() << "主窗口收到消息：ComfyUI 连接成功！✅";
+    // 1. 连接成功 -> 解锁并恢复文字
+    connect(m_apiService, &ComfyApiService::serverConnected, this, [this](){
+        this->setWindowTitle("CloudArt - 已连接 ✅");
+        m_inputPanel->setConnectionStatus(true); // <--- 调用这里
     });
 
-    // 尝试连接本地 ComfyUI (默认端口 8000)
-    // 确保你的 ComfyUI 已经启动了！
-    m_apiService->connectToHost("127.0.0.1", 8000);
+    // 2. 连接断开 -> 锁定并提示未连接
+    connect(m_apiService, &ComfyApiService::serverDisconnected, this, [this](){
+        this->setWindowTitle("CloudArt - 未连接 ❌");
+        m_inputPanel->setConnectionStatus(false); // <--- 调用这里
+    });
+
+    // 3. 错误 -> 锁定
+    connect(m_apiService, &ComfyApiService::errorOccurred, this, [this](const QString& msg){
+        this->setWindowTitle("CloudArt - 连接失败 ⚠️");
+        m_inputPanel->setConnectionStatus(false); // <--- 调用这里
+    });
+
+    // 初始状态锁住
+    m_inputPanel->setConnectionStatus(false);
+
+    // 【新增】连接侧边栏的“设置按钮”
+    connect(m_sidebarControl->settingsBtn(), &QToolButton::clicked, this, [this](){
+        SettingsDialog dlg(this);
+        if (dlg.exec() == QDialog::Accepted) {
+            // 如果用户点了确定，就重新读取配置并连接
+            loadAndConnect();
+        }
+    });
+
+    // 启动时，自动读取配置并连接
+    loadAndConnect();
 
     // =========================================================
     // 【核心逻辑 1】任务提交成功，服务器返回了 ID
@@ -996,4 +1022,23 @@ void MainWindow::loadSessionHistory(int sessionId)
 
     // 4. 滚到底部 (给点延时让布局算好)
     QTimer::singleShot(100, this, [this](){ m_chatArea->scrollToBottom(); });
+}
+
+// 【新增函数的实现】
+void MainWindow::loadAndConnect()
+{
+    QSettings settings("CloudArt", "AppConfig");
+    QString url = settings.value("Server/Url", "http://127.0.0.1:8000").toString();
+
+    if (url.isEmpty()) return;
+
+    // 【新增】立即更新 UI 状态为正在连接
+    this->setWindowTitle("CloudArt - 正在连接... 🔄");
+    qDebug() << "正在尝试连接服务器:" << url;
+
+    m_inputPanel->setConnectionStatus(false);
+
+    if (m_apiService) {
+        m_apiService->connectToHost(url);
+    }
 }

@@ -50,7 +50,7 @@ public:
      * @param address 服务器地址
      * @param port 服务器端口
      */
-    void connectToHost(const QString& address, int port);
+    void connectToHost(const QString& baseUrl);
 
     /**
      * @brief 发送提示词生成任务
@@ -112,7 +112,7 @@ private slots:
 private:
     QNetworkAccessManager* m_networkManager; ///< HTTP网络管理器
     QWebSocket* m_webSocket; ///< WebSocket连接
-    QString m_serverAddress; ///< 服务器地址
+    QString m_apiBaseUrl;
     // 【新增】记录当前的任务ID，用于匹配
     QString m_currentPromptId;
     QString m_clientId;

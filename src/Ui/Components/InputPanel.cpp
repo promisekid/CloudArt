@@ -291,3 +291,30 @@ void InputPanel::setLocked(bool locked)
 
     m_btnGenerate->setEnabled(enabled);
 }
+
+void InputPanel::setConnectionStatus(bool isConnected)
+{
+    // 1. 复用 setLocked 的逻辑来 禁用/启用 按钮
+    // 如果 isConnected 为 false (未连接)，则 locked 为 true (锁定)
+    // 但这里我们需要手动处理，因为 setLocked 会改文字，所以我们手动设 enabled
+
+    bool enable = isConnected;
+
+    m_btnGenerate->setEnabled(enable);
+    m_btnWorkflow->setEnabled(enable);
+    m_btnRef->setEnabled(enable);
+    m_inputEdit->setEnabled(enable);
+
+    if (m_btnInterrogate) m_btnInterrogate->setEnabled(enable);
+    // 注意：比例按钮在文生图模式下才启用，这里简单处理， updateState 会自动修正
+    if (m_btnRatio) m_btnRatio->setEnabled(enable);
+
+    // 2. 【关键】设置专属的提示文字
+    if (isConnected) {
+        m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+        m_btnGenerate->setText("生成");
+    } else {
+        m_inputEdit->setPlaceholderText("⚠️ 未连接服务器，请点击左下角设置进行连接...");
+        m_btnGenerate->setText("未连接");
+    }
+}

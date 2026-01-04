@@ -8,6 +8,8 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("CloudArt");
 
+    app.setWindowIcon(QIcon(":/images/logo.png"));
+
     // 【新增】启动时初始化数据库
     // 如果失败了，直接打印错误（或者弹窗提示），但不一定要退出
     if (!DatabaseManager::instance().init()) {

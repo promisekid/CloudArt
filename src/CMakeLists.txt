@@ -1,6 +1,7 @@
 # 定义源代码文件列表
 set(SOURCES
     main.cpp
+    logo.rc
     Ui/MainWindow.h
     Ui/MainWindow.cpp
 
@@ -43,6 +44,8 @@ set(SOURCES
     Ui/Components/ImageViewer.cpp
     Ui/Components/HistoryGallery.h
     Ui/Components/HistoryGallery.cpp
+    Ui/Components/SettingsDialog.h
+    Ui/Components/SettingsDialog.cpp
     ../resources/resources.qrc
 )
 

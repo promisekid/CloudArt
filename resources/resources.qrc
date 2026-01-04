@@ -10,6 +10,8 @@
 	<file>images/图生图演示.gif</file>
 	<file>images/文生图演示.png</file>
 	<file>images/文生图演示.gif</file>
+	<file>images/setting.png</file>
+	<file>images/logo.png</file>
     </qresource>
 
     <!-- 新增：工作流模板资源 -->

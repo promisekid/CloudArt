@@ -7,7 +7,7 @@
     └── .qtcreator/
         ├── CMakeLists.txt.user
         └── qtc-cmake-presets-bvhIHIpF/
-        └── qtc-cmake-presets-hEoCNuuz/
+        └── qtc-cmake-presets-NfPGFBNe/
         └── qtc-cmake-presets-XZNvAZIY/
         └── qtc-cmake-presets-ZvFdVnmy/
     └── resources/
@@ -20,6 +20,10 @@
             ├── historypic.png
             ├── loading.gif
             ├── t2i_demo.gif
+            ├── 图生图演示.gif
+            ├── 图生图演示.png
+            ├── 文生图演示.gif
+            ├── 文生图演示.png
         └── workflows/
             ├── i2i_render.json
             ├── i2i_vision.json
@@ -48,6 +52,8 @@
                 ├── ChatArea.h
                 ├── ChatBubble.cpp
                 ├── ChatBubble.h
+                ├── HistoryGallery.cpp
+                ├── HistoryGallery.h
                 ├── ImageViewer.cpp
                 ├── ImageViewer.h
                 ├── InputPanel.cpp
@@ -58,6 +64,8 @@
                 ├── SessionItem.h
                 ├── SessionList.cpp
                 ├── SessionList.h
+                ├── SettingsDialog.cpp
+                ├── SettingsDialog.h
                 ├── SidebarControl.cpp
                 ├── SidebarControl.h
                 ├── WorkflowCard.cpp
@@ -716,6 +724,8 @@ set(SOURCES
     Ui/Components/ChatBubble.cpp
     Ui/Components/ImageViewer.h
     Ui/Components/ImageViewer.cpp
+    Ui/Components/HistoryGallery.h
+    Ui/Components/HistoryGallery.cpp
     ../resources/resources.qrc
 )
 
@@ -1215,6 +1225,24 @@ QVector<MessageData> DatabaseManager::getMessages(int sessionId)
 }
 
 
+QVector<QString> DatabaseManager::getAllAiImages()
+{
+    QVector<QString> list;
+    QSqlQuery query;
+    // 查询所有 role 为 'ai' 且 image_path 不为空的记录，按时间倒序排列
+    query.prepare("SELECT image_path FROM tb_messages WHERE role = 'ai' AND image_path != '' ORDER BY timestamp DESC");
+
+    if (query.exec()) {
+        while (query.next()) {
+            list.append(query.value("image_path").toString());
+        }
+    } else {
+        qDebug() << "❌ 查询历史图片失败:" << query.lastError();
+    }
+    return list;
+}
+
+
 --- 文件结束: src\Database\DatabaseManager.cpp ---
 
 --- 文件开始: src\Database\DatabaseManager.h ---
@@ -1260,6 +1288,9 @@ public:
 
     // 获取某个会话的所有消息 (用于点击会话后加载历史)
     QVector<MessageData> getMessages(int sessionId);
+
+    // 【新增】获取所有生成的图片路径（按时间倒序）
+    QVector<QString> getAllAiImages();
 
 private:
     explicit DatabaseManager(QObject *parent = nullptr);
@@ -1851,6 +1882,8 @@ private:
 #include "../Network/ComfyApiService.h"  // 新增
 #include "../Core/WorkflowManager.h"
 #include "../Model/DataModels.h"
+#include "Components/HistoryGallery.h" // 【新增】
+#include "Components/ImageViewer.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -1887,7 +1920,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_leftContainerVisible(true)
     , m_leftContainerOriginalWidth(250) // 默认宽度
     , m_currentPageIndex(0) // 默认显示会话列表
-    , m_historyWindow(nullptr)
+    , m_historyGallery(nullptr)
     , m_leftContainerAnimation(nullptr)
     , m_mainLayout(nullptr)
     , m_apiService(nullptr) // 新增
@@ -1936,14 +1969,19 @@ void MainWindow::setupUi()
     m_leftStack->addWidget(m_sessionList);
 
     // 添加历史记录页面
-    m_historyWindow = new QWidget(m_leftStack);
-    m_historyWindow->setStyleSheet(
-        "QWidget { "
-        "  background-color: #2A2B32; "
-        "  border-right: 1px solid #40414F; "
-        "}"
-    );
-    m_leftStack->addWidget(m_historyWindow);
+    m_historyGallery = new HistoryGallery(m_leftStack);
+    // 这里不需要手动 setStyleSheet 了，因为组件内部已经写好了
+    m_leftStack->addWidget(m_historyGallery);
+
+    // 连接图库的点击信号 -> 打开大图查看器
+    connect(m_historyGallery, &HistoryGallery::imageClicked, this, [this](const QString& path){
+        QPixmap pix(path);
+        if (!pix.isNull()) {
+            ImageViewer* viewer = new ImageViewer(pix, this);
+            viewer->exec(); // 模态显示
+            delete viewer;
+        }
+    });
 
     // 设置默认显示会话列表
     m_leftStack->setCurrentIndex(0);
@@ -2627,7 +2665,14 @@ void MainWindow::switchToSessionList()
  */
 void MainWindow::switchToHistoryWindow()
 {
+    // 1. 切换界面
     switchLeftPanel(1);
+
+    // 2. 每次切换过来时，刷新数据
+    // 这样刚生成的图也能立刻看到
+    if (m_leftStack->currentIndex() == 1) {
+        m_historyGallery->loadImages();
+    }
 }
 
 void MainWindow::setJobRunning(bool running)
@@ -2697,32 +2742,47 @@ void MainWindow::onInterrogateClicked()
 
 void MainWindow::loadSessionList()
 {
-    // 1. 从数据库查数据
+    // 1. 从数据库查数据 (通常是按时间倒序，最新的在第0个)
     QVector<SessionData> sessions = DatabaseManager::instance().getAllSessions();
 
-    // 2. 刷新 UI
+    // 2. 刷新左侧 UI
     m_sessionList->loadSessions(sessions);
 
-    // 3. 如果有历史会话，默认选中第一个 (最新的)
-    // 也可以不做，留空
+    // 3. 【核心逻辑】初始化选中状态
+    if (!sessions.isEmpty()) {
+        // --- 情况 A: 数据库里有历史记录 ---
+
+        // 获取最新的会话 ID (即列表第一个)
+        int firstId = sessions.first().id;
+
+        // 1. 让左侧列表视觉上选中它
+        m_sessionList->selectSession(firstId);
+
+        // 2. 让右侧聊天区加载它的历史记录
+        loadSessionHistory(firstId);
+
+        // 3. 确保当前会话 ID 被正确记录 (双重保险)
+        m_chatArea->setCurrentSessionId(firstId);
+    }
+    else {
+        // --- 情况 B: 第一次安装软件，或者是空的 ---
+        qDebug() << "数据库为空，自动创建新会话...";
+        createNewSession();
+        // createNewSession 内部会自动刷新列表并选中新建的那个，
+        // 所以这里不需要再写额外的加载逻辑
+    }
 }
 
 void MainWindow::createNewSession()
 {
-    // 1. 数据库插入
     int newId = DatabaseManager::instance().createSession("新会话");
-
     if (newId != -1) {
-        // 2. 刷新左侧列表 (把新会话显示出来)
-        // 这一步很重要，否则左侧列表里没有这个新会话
+        // 刷新列表
         loadSessionList();
+        // 注意：loadSessionList 刚才被我们改过了。
+        // 因为现在有了新会话，它会进入 "情况 A"，自动选中这个新 ID。
+        // 所以这里不需要再手动 loadSessionHistory 了，逻辑闭环了。
 
-        // 3. 加载这个新会话
-        // loadSessionHistory 内部已经做了 clear() 和 setCurrentSessionId(newId)
-        // 并且因为是新会话，数据库没消息，它加载出来就是空的
-        loadSessionHistory(newId);
-
-        // 4. 确保左侧栏可见
         if (!m_leftContainerVisible) onToggleLeftContainer();
     }
 }
@@ -2839,6 +2899,7 @@ class ComfyApiService;
 class WorkflowManager;
 class ChatBubble;
 class SidebarControl;
+class HistoryGallery;
 
 /**
  * @brief 主窗口类
@@ -2955,8 +3016,7 @@ private:
     int m_leftContainerOriginalWidth; ///< 左侧容器的初始宽度
     int m_currentPageIndex; ///< 当前显示的页面索引
     
-    /** 历史记录窗口 */
-    QWidget* m_historyWindow;
+    HistoryGallery* m_historyGallery; // 【新增】新的类型
     
     /** 主布局 */
     QHBoxLayout* m_mainLayout;
@@ -3501,42 +3561,56 @@ bool ChatBubble::eventFilter(QObject *watched, QEvent *event)
         QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
 
         if (mouseEvent->button() == Qt::LeftButton) {
-            if (!m_currentImage.isNull()) showViewer(); // 只有有图才能看
+            if (!m_currentImage.isNull()) showViewer(); // 左键看大图
             return true;
         }
         else if (mouseEvent->button() == Qt::RightButton) {
-            // 右键菜单
+            // --- 右键菜单逻辑开始 ---
             QMenu menu;
+            // 统一深色风格
             menu.setStyleSheet(
                 "QMenu { background: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
                 "QMenu::item { padding: 5px 20px; }"
                 "QMenu::item:selected { background-color: #40414F; }"
                 );
 
+            // 只要有图片，就显示这三个雷打不动的选项
             if (!m_currentImage.isNull()) {
+
+                // 1. 复制
                 QAction* actCopy = menu.addAction("❐ 复制图片");
                 connect(actCopy, &QAction::triggered, this, [=](){
                     QClipboard *clipboard = QApplication::clipboard();
                     clipboard->setPixmap(m_currentImage);
                 });
 
+                // 2. 另存为
                 QAction* actSave = menu.addAction("💾 另存为...");
                 connect(actSave, &QAction::triggered, this, &ChatBubble::saveImage);
 
                 menu.addSeparator();
 
-                // 【新增】只有当服务器文件名存在时，才显示高清修复
-                if (!m_serverFileName.isEmpty()) {
-                    QAction* actUpscale = menu.addAction("✨ 高清修复 (1.5x)");
-                    connect(actUpscale, &QAction::triggered, this, [=](){
-                        // 修改：把图片也发出去
-                        emit upscaleRequested(m_serverFileName, m_currentImage);
-                    });
-                }
+                // 3. 高清修复 (无条件显示)
+                // 即使是历史记录或用户发的图，只要它是张图，就能点这个
+                QAction* actUpscale = menu.addAction("✨ 高清修复 (1.5x)");
+                connect(actUpscale, &QAction::triggered, this, [=](){
+                    // 发送信号
+                    // 如果 m_serverFileName 为空也没关系，MainWindow 会负责重新上传 m_currentImage
+                    emit upscaleRequested(m_serverFileName, m_currentImage);
+                });
+            }
+
+            // 如果是纯文本气泡，逻辑保持不变 (复制文字)
+            else if (m_contentLabel && !m_contentLabel->text().isEmpty()) {
+                QAction* actCopyText = menu.addAction("📋 复制内容");
+                connect(actCopyText, &QAction::triggered, [=](){
+                    QApplication::clipboard()->setText(m_contentLabel->text());
+                });
             }
 
             menu.exec(mouseEvent->globalPosition().toPoint());
             return true;
+            // --- 右键菜单逻辑结束 ---
         }
     }
     return QWidget::eventFilter(watched, event);
@@ -3680,6 +3754,278 @@ private:
 
 
 --- 文件结束: src\Ui\Components\ChatBubble.h ---
+
+--- 文件开始: src\Ui\Components\HistoryGallery.cpp ---
+
+#include "HistoryGallery.h"
+#include "../../Database/DatabaseManager.h"
+#include <QScrollArea>
+#include <QMouseEvent>
+#include <QFileInfo>
+#include <QScrollBar>
+#include <QPainter>
+#include <QDebug>
+#include <QMenu>          // 【新增】菜单
+#include <QClipboard>     // 【新增】剪贴板
+#include <QApplication>   // 【新增】获取全局剪贴板
+
+// =========================================================
+// 内部类：单个图片卡片 (支持左键查看，右键复制)
+// =========================================================
+class GalleryItem : public QLabel
+{
+public:
+    QString imagePath; // 存储原图路径
+    std::function<void(QString)> onClick; // 点击回调
+
+    GalleryItem(const QString& path, int targetWidth, QWidget* parent = nullptr)
+        : QLabel(parent), imagePath(path)
+    {
+        // 1. 样式设置
+        this->setStyleSheet(
+            "QLabel { "
+            "  background-color: black; "
+            "  border: 1px solid #333; "
+            "  border-radius: 6px; "
+            "}"
+            "QLabel:hover { "
+            "  border: 1px solid #19C37D; " // 悬停变绿
+            "  cursor: pointer; "
+            "}"
+            );
+        this->setAlignment(Qt::AlignCenter);
+
+        // 2. 加载并缩放图片 (仅显示缩略图以节省内存)
+        QPixmap pix(path);
+        if (!pix.isNull()) {
+            // 宽度固定，高度按比例自动缩放，使用平滑算法
+            QPixmap scaled = pix.scaledToWidth(targetWidth, Qt::SmoothTransformation);
+            this->setPixmap(scaled);
+            this->setFixedSize(scaled.size());
+        } else {
+            this->setText("❌ 图片丢失");
+            this->setFixedSize(targetWidth, 60);
+            this->setStyleSheet("color: #666; border: 1px dashed #444; border-radius: 6px;");
+        }
+    }
+
+protected:
+    // 捕获鼠标点击事件
+    void mousePressEvent(QMouseEvent* event) override {
+        // --- 情况 A: 左键点击 -> 查看大图 ---
+        if (event->button() == Qt::LeftButton) {
+            if (onClick) onClick(imagePath);
+        }
+        // --- 情况 B: 右键点击 -> 弹出菜单 ---
+        else if (event->button() == Qt::RightButton) {
+            showContextMenu(event->globalPosition().toPoint());
+        }
+
+        QLabel::mousePressEvent(event);
+    }
+
+private:
+    void showContextMenu(const QPoint& pos) {
+        QMenu menu;
+        // 统一深色风格样式
+        menu.setStyleSheet(
+            "QMenu { background-color: #2D2D2D; color: white; border: 1px solid #555; padding: 5px; }"
+            "QMenu::item { padding: 5px 20px; }"
+            "QMenu::item:selected { background-color: #40414F; }"
+            );
+
+        // 动作 1: 复制图片
+        QAction* actCopy = menu.addAction("❐ 复制图片");
+        QObject::connect(actCopy, &QAction::triggered, [this](){
+            // 【关键】从路径重新加载原图，而不是复制缩略图
+            QPixmap originalPix(imagePath);
+            if (!originalPix.isNull()) {
+                QClipboard *clipboard = QApplication::clipboard();
+                clipboard->setPixmap(originalPix);
+                qDebug() << "图片已复制到剪贴板:" << imagePath;
+            }
+        });
+
+        // 动作 2: 复制文件路径 (可选，方便调试)
+        QAction* actPath = menu.addAction("📂 复制路径");
+        QObject::connect(actPath, &QAction::triggered, [this](){
+            QClipboard *clipboard = QApplication::clipboard();
+            clipboard->setText(imagePath);
+        });
+
+        menu.exec(pos);
+    }
+};
+
+// =========================================================
+// HistoryGallery 主逻辑 (无需改动，保持原样即可)
+// =========================================================
+
+HistoryGallery::HistoryGallery(QWidget *parent) : QWidget(parent)
+{
+    setupUi();
+}
+
+void HistoryGallery::setupUi()
+{
+    // 1. 面板基础样式
+    this->setFixedWidth(260);
+    this->setStyleSheet("background-color: #202123; border-right: 1px solid #4D4D4F;");
+
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 20, 0, 0);
+    mainLayout->setSpacing(10);
+
+    // 2. 标题
+    QLabel* title = new QLabel("🎨 生成历史", this);
+    title->setStyleSheet("color: #ECECF1; font-weight: bold; font-size: 14px; padding-left: 15px; border: none;");
+    mainLayout->addWidget(title);
+
+    // 3. 创建滚动区域
+    m_scrollArea = new QScrollArea(this);
+    m_scrollArea->setWidgetResizable(true);
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // 水平永远关
+
+    // 【修改点 1】强制垂直滚动条总是显示（即使内容很少也能看到轨道）
+    m_scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+    m_scrollArea->setFrameShape(QFrame::NoFrame);
+
+    // 4. 优化滚轮速度
+    m_scrollArea->verticalScrollBar()->setSingleStep(20);
+
+    // 5. 【修改点 2】高对比度样式，加宽滚动条
+    m_scrollArea->setStyleSheet(
+        "QScrollArea { "
+        "   background: transparent; "
+        "   border: none; "
+        "}"
+
+        // --- 滚动条轨道 (槽) ---
+        "QScrollBar:vertical { "
+        "    border: none; "
+        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
+        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    margin: 0px; "
+        "}"
+
+        // --- 滚动滑块 (那个拖动的块) ---
+        "QScrollBar::handle:vertical { "
+        "    background: #666666; "  // 明显的灰色
+        "    min-height: 30px; "     // 最小高度设大一点
+        "    border-radius: 7px; "   // 圆角
+        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "}"
+
+        // --- 鼠标悬停变亮 ---
+        "QScrollBar::handle:vertical:hover { "
+        "    background: #999999; "  // 悬停变白一点
+        "}"
+
+        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
+        "    height: 0px; "
+        "}"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { "
+        "    background: none; "
+        "}"
+        );
+
+    // 6. 滚动容器 & 布局
+    m_scrollContent = new QWidget();
+    m_scrollContent->setStyleSheet("background: transparent;");
+
+    m_scrollLayout = new QVBoxLayout(m_scrollContent);
+    // 这里的边距要注意：右边距可以稍微改小一点(比如5)，因为滚动条占了12px空间
+    m_scrollLayout->setContentsMargins(15, 10, 5, 10);
+    m_scrollLayout->setSpacing(15);
+    m_scrollLayout->setAlignment(Qt::AlignTop); // 必须置顶
+
+    m_scrollArea->setWidget(m_scrollContent);
+    mainLayout->addWidget(m_scrollArea);
+}
+
+void HistoryGallery::clearLayout()
+{
+    QLayoutItem* item;
+    while ((item = m_scrollLayout->takeAt(0)) != nullptr) {
+        if (item->widget()) {
+            delete item->widget();
+        }
+        delete item;
+    }
+}
+
+void HistoryGallery::loadImages()
+{
+    clearLayout();
+
+    QVector<QString> paths = DatabaseManager::instance().getAllAiImages();
+
+    if (paths.isEmpty()) {
+        QLabel* empty = new QLabel("暂无记录", m_scrollContent);
+        empty->setStyleSheet("color: #666; font-size: 12px; margin-top: 20px; border:none;");
+        empty->setAlignment(Qt::AlignHCenter);
+        m_scrollLayout->addWidget(empty);
+        return;
+    }
+
+    int cardWidth = 220; // 适配宽度的缩略图尺寸
+
+    for (const QString& path : paths) {
+        if (!QFileInfo::exists(path)) continue;
+
+        GalleryItem* item = new GalleryItem(path, cardWidth, m_scrollContent);
+
+        // 绑定左键点击
+        item->onClick = [this](QString p){
+            emit imageClicked(p);
+        };
+
+        m_scrollLayout->addWidget(item);
+    }
+}
+
+
+--- 文件结束: src\Ui\Components\HistoryGallery.cpp ---
+
+--- 文件开始: src\Ui\Components\HistoryGallery.h ---
+
+#pragma once
+
+#include <QWidget>
+#include <QScrollArea>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QVector>
+
+class HistoryGallery : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit HistoryGallery(QWidget *parent = nullptr);
+
+    // 刷新显示图片
+    void loadImages();
+
+signals:
+    // 当点击某张图片时触发信号
+    void imageClicked(const QString& imagePath);
+
+private:
+    void setupUi();
+    // 清除当前的列表项
+    void clearLayout();
+
+private:
+    // 使用 ScrollArea 实现滚轮和长列表
+    QScrollArea* m_scrollArea;
+    QWidget* m_scrollContent;    // 滚动区域里的实体容器
+    QVBoxLayout* m_scrollLayout; // 垂直布局（单列）
+};
+
+
+--- 文件结束: src\Ui\Components\HistoryGallery.h ---
 
 --- 文件开始: src\Ui\Components\ImageViewer.cpp ---
 
@@ -3884,16 +4230,23 @@ private:
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QActionGroup>
+#include <QScrollBar> // 引入滚动条头文件以便美化
+#include <QKeyEvent>
 
 InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     m_currentResolution = QSize(1024, 1024);
 
-    this->setFixedHeight(120);
-    this->setStyleSheet("background-color: #343541; border-top: 1px solid #5D5D67;");
+    // 设置底部面板的背景和边框
+    this->setStyleSheet("InputPanel { background-color: #343541; border-top: 1px solid #5D5D67; }");
+
+    // 设置一个合理的初始高度策略
+    this->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(20, 20, 20, 20); // 调整边距
-    layout->setSpacing(15); // 控件间距
+    // 对齐方式设为 Bottom，这样当输入框变高时，按钮保持在底部对齐（可选，看你喜好）
+    layout->setAlignment(Qt::AlignBottom);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(15);
 
     // 1. [新增] 参考图按钮 (使用 QToolButton)
     m_btnRef = new QToolButton(this);
@@ -3948,44 +4301,125 @@ InputPanel::InputPanel(QWidget *parent) : QWidget(parent) {
     );
     layout->addWidget(m_btnWorkflow);
 
-    // 3. 真正的输入框 (替换模拟的QLabel)
-    m_inputEdit = new QLineEdit(this);
-    m_inputEdit->setPlaceholderText("输入提示词...");
+    m_inputEdit = new QPlainTextEdit(this);
+    m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+
+    // 设置初始样式
     m_inputEdit->setStyleSheet(
-        "QLineEdit { background-color: #40414F; color: white; border: 1px solid #555; border-radius: 4px; padding: 0 10px; }"
-        "QLineEdit:focus { border-color: #19C37D; }"
-        "QLineEdit::placeholder { color: #CCC; }"
-    );
+        "QPlainTextEdit { "
+        "   background-color: #40414F; "
+        "   color: white; "
+        "   border: 1px solid #555; "
+        "   border-radius: 4px; "
+        "   padding: 8px; " // 内边距大一点更好看
+        "   font-size: 14px; "
+        "}"
+        "QPlainTextEdit:focus { border-color: #19C37D; }"
+
+        // 隐藏/美化滚动条 (和之前 HistoryGallery 类似)
+        "QScrollBar:vertical { width: 8px; background: transparent; }"
+        "QScrollBar::handle:vertical { background: #666; border-radius: 4px; }"
+        );
+
+    // 初始高度设为一行的高度 (约40px)
     m_inputEdit->setFixedHeight(40);
-    m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed); // 只有它会伸缩
+    m_inputEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // 安装事件过滤器 (用于拦截回车)
+    m_inputEdit->installEventFilter(this);
+
+    // 监听文字变化，自动调整高度
+    connect(m_inputEdit, &QPlainTextEdit::textChanged, this, &InputPanel::adjustInputHeight);
+
     layout->addWidget(m_inputEdit);
 
     // 4. 生成按钮
     m_btnGenerate = new QPushButton("生成", this);
-    m_btnGenerate->setFixedSize(80, 40);
+    m_btnGenerate->setFixedSize(80, 40); // 按钮高度固定
     m_btnGenerate->setStyleSheet(
         "QPushButton { background-color: #19C37D; color: white; border-radius: 4px; font-weight: bold; }"
         "QPushButton:hover { background-color: #1AD48A; }"
-    );
+        "QPushButton:disabled { background-color: #2A2B32; color: #888; }"
+        );
     layout->addWidget(m_btnGenerate);
 
-    // 连接信号槽
+    // 连接信号
     connect(m_btnGenerate, &QPushButton::clicked, this, &InputPanel::onGenerateClicked);
-    
-    // 连接回车键信号
-    connect(m_inputEdit, &QLineEdit::returnPressed, this, &InputPanel::onGenerateClicked);
+
 }
 
 
 
-void InputPanel::onGenerateClicked() {
-    QString prompt = m_inputEdit->text().trimmed();
-    if (!prompt.isEmpty()) {
-        emit generateClicked(prompt);
-        // 清空输入框
-        m_inputEdit->clear();
+bool InputPanel::eventFilter(QObject *obj, QEvent *e)
+{
+    if (obj == m_inputEdit && e->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(e);
+
+        // 如果按下的是 Enter (Key_Return)
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            // 检查是否按下了 Shift
+            if (keyEvent->modifiers() & Qt::ShiftModifier) {
+                // Shift + Enter -> 允许换行 (默认行为，不做处理，返回 false 让控件自己处理)
+                return false;
+            } else {
+                // 单独按 Enter -> 发送消息
+                onGenerateClicked();
+                return true; // 事件已处理，不再传递给控件(防止产生换行)
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, e);
+}
+
+// 【新增】自动调整高度逻辑
+void InputPanel::adjustInputHeight()
+{
+    QTextDocument *doc = m_inputEdit->document();
+    // 调整文档布局宽度以匹配控件宽度 (防止换行计算错误)
+    doc->setTextWidth(m_inputEdit->viewport()->width());
+
+    // 计算内容总高度
+    int contentHeight = doc->size().height();
+
+    // 加上上下的 padding (CSS里设置了 padding: 8px，上下加起来约16，微调一下)
+    int margins = 16;
+    int totalHeight = contentHeight + margins;
+
+    // 设定限制
+    int minHeight = 40;  // 1行的高度
+    int maxHeight = 120; // 约 4-5 行的高度
+
+    // 限制在 min 和 max 之间
+    int finalHeight = qBound(minHeight, totalHeight, maxHeight);
+
+    if (m_inputEdit->height() != finalHeight) {
+        m_inputEdit->setFixedHeight(finalHeight);
+
+        // 如果你的 InputPanel 之前设置了 fixedHeight，这里需要让父控件也 updateGeometry
+        // 因为我们去掉了 setFixedHeight，这里会自动触发布局重算
+    }
+
+    // 只有当内容超过最大高度时，才显示垂直滚动条
+    if (totalHeight > maxHeight) {
+        m_inputEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    } else {
+        m_inputEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 }
+
+void InputPanel::onGenerateClicked() {
+    // 获取纯文本
+    QString prompt = m_inputEdit->toPlainText().trimmed();
+    if (!prompt.isEmpty()) {
+        emit generateClicked(prompt);
+        // 清空并重置高度
+        m_inputEdit->clear();
+        adjustInputHeight();
+    }
+}
+
+
+
 
 
 void InputPanel::setupRatioMenu()
@@ -4034,15 +4468,28 @@ void InputPanel::onRatioSelected(QAction* action)
 }
 
 void InputPanel::updateState(WorkflowType type) {
-    // 只有文生图才允许调整分辨率
-    // 图生图通常跟随参考图比例 (或者你也想强制改)
     if (type == WorkflowType::TextToImage) {
+        // --- 文生图模式 ---
+        // 1. 禁用参考图上传（因为纯文生图不需要）
         m_btnRef->setEnabled(false);
-        m_btnRatio->setEnabled(true);  // 启用比例
+
+        // 2. 启用画幅比例选择
+        m_btnRatio->setEnabled(true);
+
+        // 3. 【新增】禁用反推按钮（因为没有图片可以反推）
+        if (m_btnInterrogate) m_btnInterrogate->setEnabled(false);
+
     } else {
+        // --- 图生图/其他模式 ---
+        // 1. 启用参考图上传
         m_btnRef->setEnabled(true);
-        m_btnRatio->setEnabled(false); // 禁用比例 (假设图生图用 SmartResize 自动控制)
+
+        // 2. 禁用画幅比例（通常跟随原图尺寸）
+        m_btnRatio->setEnabled(false);
         m_btnRatio->setText("Auto");
+
+        // 3. 【新增】启用反推按钮
+        if (m_btnInterrogate) m_btnInterrogate->setEnabled(true);
     }
 }
 
@@ -4051,20 +4498,25 @@ QSize InputPanel::currentResolution() const {
 }
 
 
+
+// setLocked 函数也要修改一下，因为控件类型变了
 void InputPanel::setLocked(bool locked)
 {
     bool enabled = !locked;
 
-    // 1. 禁用所有功能按钮
-    m_btnRef->setEnabled(enabled);          // 参考图
-    m_btnInterrogate->setEnabled(enabled);  // 反推
-    m_btnRatio->setEnabled(enabled);        // 比例
-    m_btnWorkflow->setEnabled(enabled);     // 工作流
+    m_btnRef->setEnabled(enabled);
+    m_btnInterrogate->setEnabled(enabled);
+    m_btnRatio->setEnabled(enabled);
+    m_btnWorkflow->setEnabled(enabled);
 
-    // 2. 禁用输入框
+    // QPlainTextEdit 也有 setEnabled，或者用 setReadOnly
     m_inputEdit->setEnabled(enabled);
+    if (locked) {
+        m_inputEdit->setPlaceholderText("生成中，请稍候...");
+    } else {
+        m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+    }
 
-    // 3. 禁用生成按钮
     m_btnGenerate->setEnabled(enabled);
 }
 
@@ -4091,6 +4543,7 @@ void InputPanel::setLocked(bool locked)
 #include <QToolButton> // 使用 ToolButton 做纯图标按钮更合适
 #include <QLineEdit>
 #include <QMenu>
+#include <QPlainTextEdit>
 #include "../../Model/WorkflowTypes.h"
 
 /**
@@ -4130,7 +4583,7 @@ public:
      * @brief 获取输入框
      * @return QLineEdit* 输入框指针
      */
-    QLineEdit* getInputEdit() const { return m_inputEdit; }
+    QPlainTextEdit* getInputEdit() const { return m_inputEdit; }
 
     /**
      * @brief 根据工作流类型更新UI状态
@@ -4157,6 +4610,10 @@ signals:
     // 【新增】比例改变信号（可选，如果MainWindow需要立即知道）
     void resolutionChanged(int w, int h);
 
+protected:
+    // 【新增】重写事件过滤器，处理回车键
+    bool eventFilter(QObject *obj, QEvent *e) override;
+
 private slots:
     /**
      * @brief 处理生成按钮点击
@@ -4165,6 +4622,9 @@ private slots:
 
     // 【新增】处理比例选择
     void onRatioSelected(QAction* action);
+
+    // 【新增】文本变化时调整高度
+    void adjustInputHeight();
 
 private:
     void setupRatioMenu(); // 初始化菜单
@@ -4178,7 +4638,7 @@ private:
     QMenu* m_ratioMenu;
     QSize m_currentResolution; // 当前选中的分辨率
 
-    QLineEdit* m_inputEdit;
+    QPlainTextEdit* m_inputEdit;
     QPushButton* m_btnGenerate;
 
     QToolButton* m_btnInterrogate; // 【新增】
@@ -4791,6 +5251,8 @@ public:
      */
     void setTitle(const QString& newTitle);
 
+
+
 signals:
     /**
      * @brief 项点击信号
@@ -4924,11 +5386,39 @@ void SessionList::setupUi()
 
     // 美化滚动条 (QSS) - 这一大段是为了让滚动条变细、变深色
     scrollArea->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollBar:vertical { border: none; background: #202123; width: 8px; margin: 0px; }"
-        "QScrollBar::handle:vertical { background: #4D4D4F; min-height: 20px; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+        "QScrollArea { "
+        "   background: transparent; "
+        "   border: none; "
+        "}"
+
+        // --- 滚动条轨道 (槽) ---
+        "QScrollBar:vertical { "
+        "    border: none; "
+        "    background: #111111; "  // 改成接近黑色，和面板的深灰区分开
+        "    width: 14px; "          // 加宽到 14px，非常明显
+        "    margin: 0px; "
+        "}"
+
+        // --- 滚动滑块 (那个拖动的块) ---
+        "QScrollBar::handle:vertical { "
+        "    background: #666666; "  // 明显的灰色
+        "    min-height: 30px; "     // 最小高度设大一点
+        "    border-radius: 7px; "   // 圆角
+        "    margin: 2px; "          // 留边距，让滑块悬浮在轨道里
+        "}"
+
+        // --- 鼠标悬停变亮 ---
+        "QScrollBar::handle:vertical:hover { "
+        "    background: #999999; "  // 悬停变白一点
+        "}"
+
+        // --- 隐藏上下箭头 (如果不隐藏，可能会占据空间显示不出来) ---
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
+        "    height: 0px; "
+        "}"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { "
+        "    background: none; "
+        "}"
         );
 
     // 5. 创建滚动区域内部的“容器画布”
@@ -5024,6 +5514,28 @@ void SessionList::loadSessions(const QVector<SessionData>& sessions)
     }
 }
 
+void SessionList::selectSession(int id)
+{
+    // 遍历所有 Item 找到匹配的 ID
+    for (SessionItem* item : m_items) {
+        if (item->id() == id) {
+            handleItemSelection(item); // 调用内部函数设置高亮样式
+            // 注意：这里我们只改变样式，不发送信号，避免死循环
+            // 数据的加载由 MainWindow 主动调用 loadSessionHistory
+            return;
+        }
+    }
+}
+
+int SessionList::getFirstSessionId() const
+{
+    if (m_items.isEmpty()) return -1;
+    // 因为是垂直布局，且 addSession 是 append 到布局末尾
+    // 但数据源通常是倒序的（最新的在前面），所以列表的第一个就是最新的
+    // 这里的 0 索引对应 UI 上最顶部的元素
+    return m_items.first()->id();
+}
+
 
 --- 文件结束: src\Ui\Components\SessionList.cpp ---
 
@@ -5081,6 +5593,12 @@ public:
     // 【新增】加载会话列表数据
     void loadSessions(const QVector<SessionData>& sessions);
 
+    // 【新增】通过 ID 选中指定会话（用于初始化时高亮）
+    void selectSession(int id);
+
+    // 【新增】获取列表里的第一个会话ID（如果没有则返回 -1）
+    int getFirstSessionId() const;
+
 
 signals:
     /**
@@ -5133,6 +5651,85 @@ private:
 
 --- 文件结束: src\Ui\Components\SessionList.h ---
 
+--- 文件开始: src\Ui\Components\SettingsDialog.cpp ---
+
+#include "SettingsDialog.h"
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QLabel>
+#include <QSettings>
+
+SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
+    setWindowTitle("服务器连接设置");
+    setFixedSize(350, 180); // 稍微宽一点，方便粘贴长链接
+
+    // 读取配置，默认值设为本地
+    QSettings settings("CloudArt", "AppConfig");
+    QString savedUrl = settings.value("Server/Url", "http://127.0.0.1:8188").toString();
+
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+
+    // 1. 输入区域
+    QVBoxLayout* inputLayout = new QVBoxLayout();
+    QLabel* lbl = new QLabel("服务器链接:", this);
+    lbl->setStyleSheet("font-weight: bold;");
+
+    m_editUrl = new QLineEdit(savedUrl, this);
+    m_editUrl->setPlaceholderText("例如: http://frp-fly.top:12345");
+
+    inputLayout->addWidget(lbl);
+    inputLayout->addWidget(m_editUrl);
+    mainLayout->addLayout(inputLayout);
+
+    // 2. 提示文字
+    QLabel* tip = new QLabel("提示：\n1. 本地请填 http://127.0.0.1:8188\n2. 远程请直接粘贴樱花穿透/Cpolar生成的完整链接。", this);
+    tip->setStyleSheet("color: #888; font-size: 12px; margin-top: 10px;");
+    tip->setWordWrap(true);
+    mainLayout->addWidget(tip);
+
+    mainLayout->addStretch();
+
+    // 3. 按钮
+    QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    connect(buttons, &QDialogButtonBox::accepted, this, [=](){
+        // 保存配置
+        QSettings settings("CloudArt", "AppConfig");
+        settings.setValue("Server/Url", m_editUrl->text().trimmed());
+        accept();
+    });
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    mainLayout->addWidget(buttons);
+}
+
+QString SettingsDialog::getUrl() const {
+    return m_editUrl->text().trimmed();
+}
+
+
+--- 文件结束: src\Ui\Components\SettingsDialog.cpp ---
+
+--- 文件开始: src\Ui\Components\SettingsDialog.h ---
+
+#pragma once
+#include <QDialog>
+#include <QLineEdit>
+
+class SettingsDialog : public QDialog {
+    Q_OBJECT
+public:
+    explicit SettingsDialog(QWidget *parent = nullptr);
+
+    // 【修改】只留一个获取 URL 的函数
+    QString getUrl() const;
+
+private:
+    // 【修改】只留一个输入框指针
+    QLineEdit* m_editUrl;
+};
+
+
+--- 文件结束: src\Ui\Components\SettingsDialog.h ---
+
 --- 文件开始: src\Ui\Components\SidebarControl.cpp ---
 
 #include "SidebarControl.h"
@@ -5150,17 +5747,18 @@ SidebarControl::SidebarControl(QWidget* parent)
     setAttribute(Qt::WA_TranslucentBackground);
     
     m_layout = new QVBoxLayout(this);
-    m_layout->setSpacing(30);
-    m_layout->setContentsMargins(0, 0, 0, 0);
+    m_layout->setSpacing(20);
+    m_layout->setContentsMargins(0, 10, 0, 10);
     
     m_toggleBtn = createBtn(":/images/HideConversation.png", "对话记录");
     m_historyBtn = createBtn(":/images/historypic.png", "生成记录");
     
     m_layout->addWidget(m_toggleBtn);
     m_layout->addWidget(m_historyBtn);
-    m_layout->addStretch();
     
     setFixedWidth(40);
+
+    adjustSize();
 }
 
 SidebarControl::~SidebarControl()
@@ -5797,10 +6395,8 @@ WorkflowSelector::WorkflowSelector(QWidget* parent) : QWidget(parent) {
     setAttribute(Qt::WA_TranslucentBackground);
     
     // 初始化测试工作流数据
-    m_workflows.append(WorkflowInfo(1, "文生图", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "基础生成模式，从文字创建图像", WorkflowType::TextToImage));
-    m_workflows.append(WorkflowInfo(2, "图生图", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "基于参考图生成新图像", WorkflowType::ImageToImage));
-    m_workflows.append(WorkflowInfo(3, "局部重绘", ":/images/ComfyUI_00292_.png", ":/images/t2i_demo.gif", "对图像局部区域进行重绘", WorkflowType::Inpaint));
-    m_workflows.append(WorkflowInfo(4, "图像放大", ":/images/ComfyUI_00301_.png", ":/images/t2i_demo.gif", "提升图像分辨率和细节", WorkflowType::Upscale));
+    m_workflows.append(WorkflowInfo(1, "文生图", ":/images/文生图演示.png", ":/images/文生图演示.gif", "基础生成模式，从文字创建图像", WorkflowType::TextToImage));
+    m_workflows.append(WorkflowInfo(2, "图生图", ":/images/图生图演示.png", ":/images/图生图演示.gif", "基于参考图生成新图像", WorkflowType::ImageToImage));
     
     setupUi();
 }

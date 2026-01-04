@@ -19,6 +19,7 @@
 #include "../Model/WorkflowTypes.h"
 #include "../Network/ComfyApiService.h"
 #include "../Database/DatabaseManager.h"
+#include "Components/SettingsDialog.h"
 
 
 // --- 前向声明 (Forward Declarations) ---
@@ -97,6 +98,8 @@ private slots:
 
     // 【新增】处理反推按钮点击
     void onInterrogateClicked();
+
+    void loadAndConnect();
 
 protected:
     /**

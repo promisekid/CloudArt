@@ -11,47 +11,42 @@
 #include <QHttpPart>      // 【新增】
 #include <QFile>          // 【新增】
 #include <QFileInfo>      // 【新增】
+#include <QSslConfiguration>
+#include <QSslSocket>
 
 ComfyApiService::ComfyApiService(QObject *parent)
     : QObject(parent)
 {
-    // 1. 初始化网络管理器 (用于后续发 HTTP POST 请求)
     m_networkManager = new QNetworkAccessManager(this);
-
-    // 2. 初始化 WebSocket (用于监听服务器发回的进度消息)
     m_webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
-    // 3. 连接 WebSocket 的基础信号
-    // 当 socket 连接成功时 -> 转发我们的 serverConnected 信号
+    // 生成 ID
+    m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    // --- 1. 连接成功信号 ---
     connect(m_webSocket, &QWebSocket::connected, this, [=](){
-        qDebug() << "WebSocket Connected!";
+        qDebug() << "✅ WebSocket 连接成功!";
         emit serverConnected();
     });
 
-    // 当 socket 断开时 -> 转发 serverDisconnected
+    // --- 2. 连接断开信号 (关键) ---
     connect(m_webSocket, &QWebSocket::disconnected, this, [=](){
-        qDebug() << "WebSocket Disconnected!";
+        qDebug() << "❌ WebSocket 连接断开";
         emit serverDisconnected();
     });
 
-    // 当 socket 出错时 -> 打印错误并转发
-    // 注意：error 信号在 Qt6 中可能有重载，使用 lambda 接收 QAbstractSocket::SocketError
-    typedef void (QWebSocket::*ErrorSignal)(QAbstractSocket::SocketError);
-    connect(m_webSocket, static_cast<ErrorSignal>(&QWebSocket::errorOccurred),
-            this, [=](QAbstractSocket::SocketError error){
+    // --- 3. 连接错误信号 (关键) ---
+    // Qt6 写法：使用 lambda 接收错误信息
+    connect(m_webSocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error){
         Q_UNUSED(error);
-        qDebug() << "WebSocket Error:" << m_webSocket->errorString();
-        emit errorOccurred(m_webSocket->errorString());
+        QString errStr = m_webSocket->errorString();
+        qDebug() << "⚠️ WebSocket 错误:" << errStr;
+        emit errorOccurred(errStr);
     });
 
-    // 【新增】连接收到消息的信号
+    // --- 4. 收到消息信号 ---
     connect(m_webSocket, &QWebSocket::textMessageReceived,
             this, &ComfyApiService::onTextMessageReceived);
-
-    // 【修改 1】生成一个唯一的 UUID 作为身份证
-    // 格式类似：{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
-    m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    qDebug() << "客户端 ID 已生成:" << m_clientId;
 }
 
 ComfyApiService::~ComfyApiService()
@@ -63,47 +58,81 @@ ComfyApiService::~ComfyApiService()
     }
 }
 
-void ComfyApiService::connectToHost(const QString& address, int port)
+void ComfyApiService::connectToHost(const QString& fullUrl)
 {
-    // 保存 HTTP 地址 (注意没有 /ws 后缀)
-    m_serverAddress = QString("http://%1:%2").arg(address).arg(port);
+    QString urlStr = fullUrl.trimmed();
 
-    // 【修改 2】在 URL 后面加上 ?clientId=xxx
-    // 注意：wsUrl 是 ws://127.0.0.1:8188/ws?clientId=xxxx
-    QString wsUrl = QString("ws://%1:%2/ws?clientId=%3")
-                        .arg(address)
-                        .arg(port)
-                        .arg(m_clientId);
+    // 1. 容错处理：如果用户没写 http://，默认补上
+    if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+        urlStr = "http://" + urlStr;
+    }
 
-    qDebug() << "Connecting WebSocket with ID:" << wsUrl;
+    // 2. 去掉末尾的斜杠 (为了后续拼接方便)
+    if (urlStr.endsWith("/")) {
+        urlStr.chop(1);
+    }
 
-    m_webSocket->close();
+    // 3. 保存 HTTP 基础地址 (例如: http://frp.top:12345)
+    m_apiBaseUrl = urlStr;
+
+    // 4. 生成 WebSocket 地址
+    // 把 http 换成 ws，把 https 换成 wss
+    QString wsUrl = m_apiBaseUrl;
+    if (wsUrl.startsWith("https://")) {
+        wsUrl.replace(0, 8, "wss://");
+    } else {
+        wsUrl.replace(0, 7, "ws://");
+    }
+
+    // 加上 WebSocket 路径和 ClientID
+    wsUrl += QString("/ws?clientId=%1").arg(m_clientId);
+
+    qDebug() << "🔗 准备连接:" << wsUrl;
+
+    if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
+        m_webSocket->close();
+    }
+
+    // ================== 【新增代码开始】 ==================
+    // 配置 SSL，允许自签名证书或不安全的证书
+    QSslConfiguration sslConfig = m_webSocket->sslConfiguration();
+    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // 核心：不验证服务器证书
+    sslConfig.setProtocol(QSsl::AnyProtocol);
+    m_webSocket->setSslConfiguration(sslConfig);
+
+    // 额外保险：如果发生 SSL 错误，强制忽略
+    connect(m_webSocket, &QWebSocket::sslErrors, this, [=](const QList<QSslError>& errors){
+        qDebug() << "⚠️ 捕获到 SSL 错误 (已忽略):" << errors.first().errorString();
+        m_webSocket->ignoreSslErrors();
+    });
+    // ================== 【新增代码结束】 ==================
+
+
+    // 打开新连接
     m_webSocket->open(QUrl(wsUrl));
 }
 
 void ComfyApiService::queuePrompt(const QJsonObject& workflow)
 {
-    // 1. 构造请求 URL: http://127.0.0.1:8188/prompt
-    QUrl url(m_serverAddress + "/prompt");
+    // 修改这里：使用 m_apiBaseUrl
+    QUrl url(m_apiBaseUrl + "/prompt");
     QNetworkRequest request(url);
 
-    // 2. 设置头信息 (告诉服务器我们要发 JSON)
+    // ... 下面的代码保持不变 ...
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    // 3. 构造发送的数据包
-    // ComfyUI 要求格式: { "prompt": { ...工作流节点... } }
     QJsonObject payload;
     payload["prompt"] = workflow;
-    // client_id 最好加上，用于区分是谁发的，这里暂时先不加，后面再完善
-
-    // 【修改 3】告诉服务器：这个任务是 m_clientId 发起的
-    // 这样服务器执行完后，就会把 executed 消息发回给这个 ID 对应的 WebSocket
     payload["client_id"] = m_clientId;
-
     QByteArray data = QJsonDocument(payload).toJson();
 
-    qDebug() << "Posting prompt (Client ID:" << m_clientId << ")...";
+    qDebug() << "Posting prompt to:" << url.toString(); // 方便调试
     QNetworkReply* reply = m_networkManager->post(request, data);
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);          // 防止编译器警告“未使用的变量”
+        reply->ignoreSslErrors();  // 强制忽略错误
+    });
 
     connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onPostFinished);
 }
@@ -192,7 +221,7 @@ void ComfyApiService::onTextMessageReceived(const QString &message)
 
 void ComfyApiService::getImage(const QString& filename, const QString& subfolder, const QString& type, const QString& promptId)
 {
-    QUrl url(m_serverAddress + "/view");
+    QUrl url(m_apiBaseUrl + "/view");
     QUrlQuery query;
     query.addQueryItem("filename", filename);
     query.addQueryItem("subfolder", subfolder);
@@ -201,6 +230,12 @@ void ComfyApiService::getImage(const QString& filename, const QString& subfolder
 
     QNetworkRequest request(url);
     QNetworkReply* reply = m_networkManager->get(request);
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);
+        reply->ignoreSslErrors();
+    });
 
     // 【关键】把 ID 和 文件名 存入 reply 的属性中，以便回调时使用
     reply->setProperty("promptId", promptId);
@@ -264,7 +299,7 @@ void ComfyApiService::uploadImage(const QString& localPath)
     multiPart->append(imagePart);
 
     // 3. 构造请求 URL: http://ip:port/upload/image
-    QUrl url(m_serverAddress + "/upload/image");
+    QUrl url(m_apiBaseUrl + "/upload/image");
     QNetworkRequest request(url);
 
     qDebug() << "📤 正在上传图片:" << localPath;
@@ -272,6 +307,12 @@ void ComfyApiService::uploadImage(const QString& localPath)
     // 4. 发送 POST
     QNetworkReply* reply = m_networkManager->post(request, multiPart);
     multiPart->setParent(reply); // 让 reply 管理 multiPart 的生命周期
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);
+        reply->ignoreSslErrors();
+    });
 
     // 5. 处理结果
     connect(reply, &QNetworkReply::finished, this, [=](){

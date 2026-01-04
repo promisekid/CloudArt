@@ -9,6 +9,7 @@ SidebarControl::SidebarControl(QWidget* parent)
     , m_layout(nullptr)
     , m_toggleBtn(nullptr)
     , m_historyBtn(nullptr)
+    , m_settingsBtn(nullptr)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     
@@ -22,8 +23,17 @@ SidebarControl::SidebarControl(QWidget* parent)
     m_layout->addWidget(m_toggleBtn);
     m_layout->addWidget(m_historyBtn);
     
-    setFixedWidth(40);
+    // 【新增】添加一个弹簧，把设置按钮顶到最底部
+    m_layout->addStretch();
 
+    // 【新增】创建设置按钮
+    // 注意：这里暂时复用 'HideConversation.png' 图标，你可以以后换成齿轮图标
+    m_settingsBtn = createBtn(":/images/setting.png", "服务器设置");
+
+    // 如果想区分，可以暂时给它变个色或者样式，这里先保持一致
+    m_layout->addWidget(m_settingsBtn);
+
+    setFixedWidth(40);
     adjustSize();
 }
 
@@ -67,4 +77,9 @@ QToolButton* SidebarControl::createBtn(const QString& iconPath, const QString& t
     );
     btn->setToolTip(tooltip);
     return btn;
+}
+
+QToolButton* SidebarControl::settingsBtn() const
+{
+    return m_settingsBtn;
 }

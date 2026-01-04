@@ -7,7 +7,6 @@
     └── .qtcreator/
         ├── CMakeLists.txt.user
         └── qtc-cmake-presets-bvhIHIpF/
-        └── qtc-cmake-presets-NfPGFBNe/
         └── qtc-cmake-presets-XZNvAZIY/
         └── qtc-cmake-presets-ZvFdVnmy/
     └── resources/
@@ -19,6 +18,8 @@
             ├── HideConversation.png
             ├── historypic.png
             ├── loading.gif
+            ├── logo.png
+            ├── setting.png
             ├── t2i_demo.gif
             ├── 图生图演示.gif
             ├── 图生图演示.png
@@ -31,6 +32,8 @@
             ├── 高清修复.json
     └── src/
         ├── CMakeLists.txt
+        ├── logo.ico
+        ├── logo.rc
         ├── main.cpp
         └── Core/
             ├── WorkflowManager.cpp
@@ -684,6 +687,7 @@ add_subdirectory(src)
 # 定义源代码文件列表
 set(SOURCES
     main.cpp
+    logo.rc
     Ui/MainWindow.h
     Ui/MainWindow.cpp
 
@@ -726,6 +730,8 @@ set(SOURCES
     Ui/Components/ImageViewer.cpp
     Ui/Components/HistoryGallery.h
     Ui/Components/HistoryGallery.cpp
+    Ui/Components/SettingsDialog.h
+    Ui/Components/SettingsDialog.cpp
     ../resources/resources.qrc
 )
 
@@ -741,7 +747,7 @@ target_link_libraries(CloudArt PRIVATE
 )
 
 # 设置 Windows 子系统 (避免运行时弹出黑色 cmd 窗口，但在开发调试期可以先注释掉下面这行)
-# set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)
+set_target_properties(CloudArt PROPERTIES WIN32_EXECUTABLE ON)
 
 
 --- 文件结束: src\CMakeLists.txt ---
@@ -757,6 +763,8 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     app.setApplicationName("CloudArt");
+
+    app.setWindowIcon(QIcon(":/images/logo.png"));
 
     // 【新增】启动时初始化数据库
     // 如果失败了，直接打印错误（或者弹窗提示），但不一定要退出
@@ -1447,47 +1455,42 @@ struct WorkflowInfo {
 #include <QHttpPart>      // 【新增】
 #include <QFile>          // 【新增】
 #include <QFileInfo>      // 【新增】
+#include <QSslConfiguration>
+#include <QSslSocket>
 
 ComfyApiService::ComfyApiService(QObject *parent)
     : QObject(parent)
 {
-    // 1. 初始化网络管理器 (用于后续发 HTTP POST 请求)
     m_networkManager = new QNetworkAccessManager(this);
-
-    // 2. 初始化 WebSocket (用于监听服务器发回的进度消息)
     m_webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
-    // 3. 连接 WebSocket 的基础信号
-    // 当 socket 连接成功时 -> 转发我们的 serverConnected 信号
+    // 生成 ID
+    m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    // --- 1. 连接成功信号 ---
     connect(m_webSocket, &QWebSocket::connected, this, [=](){
-        qDebug() << "WebSocket Connected!";
+        qDebug() << "✅ WebSocket 连接成功!";
         emit serverConnected();
     });
 
-    // 当 socket 断开时 -> 转发 serverDisconnected
+    // --- 2. 连接断开信号 (关键) ---
     connect(m_webSocket, &QWebSocket::disconnected, this, [=](){
-        qDebug() << "WebSocket Disconnected!";
+        qDebug() << "❌ WebSocket 连接断开";
         emit serverDisconnected();
     });
 
-    // 当 socket 出错时 -> 打印错误并转发
-    // 注意：error 信号在 Qt6 中可能有重载，使用 lambda 接收 QAbstractSocket::SocketError
-    typedef void (QWebSocket::*ErrorSignal)(QAbstractSocket::SocketError);
-    connect(m_webSocket, static_cast<ErrorSignal>(&QWebSocket::errorOccurred),
-            this, [=](QAbstractSocket::SocketError error){
+    // --- 3. 连接错误信号 (关键) ---
+    // Qt6 写法：使用 lambda 接收错误信息
+    connect(m_webSocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error){
         Q_UNUSED(error);
-        qDebug() << "WebSocket Error:" << m_webSocket->errorString();
-        emit errorOccurred(m_webSocket->errorString());
+        QString errStr = m_webSocket->errorString();
+        qDebug() << "⚠️ WebSocket 错误:" << errStr;
+        emit errorOccurred(errStr);
     });
 
-    // 【新增】连接收到消息的信号
+    // --- 4. 收到消息信号 ---
     connect(m_webSocket, &QWebSocket::textMessageReceived,
             this, &ComfyApiService::onTextMessageReceived);
-
-    // 【修改 1】生成一个唯一的 UUID 作为身份证
-    // 格式类似：{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
-    m_clientId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    qDebug() << "客户端 ID 已生成:" << m_clientId;
 }
 
 ComfyApiService::~ComfyApiService()
@@ -1499,47 +1502,81 @@ ComfyApiService::~ComfyApiService()
     }
 }
 
-void ComfyApiService::connectToHost(const QString& address, int port)
+void ComfyApiService::connectToHost(const QString& fullUrl)
 {
-    // 保存 HTTP 地址 (注意没有 /ws 后缀)
-    m_serverAddress = QString("http://%1:%2").arg(address).arg(port);
+    QString urlStr = fullUrl.trimmed();
 
-    // 【修改 2】在 URL 后面加上 ?clientId=xxx
-    // 注意：wsUrl 是 ws://127.0.0.1:8188/ws?clientId=xxxx
-    QString wsUrl = QString("ws://%1:%2/ws?clientId=%3")
-                        .arg(address)
-                        .arg(port)
-                        .arg(m_clientId);
+    // 1. 容错处理：如果用户没写 http://，默认补上
+    if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+        urlStr = "http://" + urlStr;
+    }
 
-    qDebug() << "Connecting WebSocket with ID:" << wsUrl;
+    // 2. 去掉末尾的斜杠 (为了后续拼接方便)
+    if (urlStr.endsWith("/")) {
+        urlStr.chop(1);
+    }
 
-    m_webSocket->close();
+    // 3. 保存 HTTP 基础地址 (例如: http://frp.top:12345)
+    m_apiBaseUrl = urlStr;
+
+    // 4. 生成 WebSocket 地址
+    // 把 http 换成 ws，把 https 换成 wss
+    QString wsUrl = m_apiBaseUrl;
+    if (wsUrl.startsWith("https://")) {
+        wsUrl.replace(0, 8, "wss://");
+    } else {
+        wsUrl.replace(0, 7, "ws://");
+    }
+
+    // 加上 WebSocket 路径和 ClientID
+    wsUrl += QString("/ws?clientId=%1").arg(m_clientId);
+
+    qDebug() << "🔗 准备连接:" << wsUrl;
+
+    if (m_webSocket->state() == QAbstractSocket::ConnectedState) {
+        m_webSocket->close();
+    }
+
+    // ================== 【新增代码开始】 ==================
+    // 配置 SSL，允许自签名证书或不安全的证书
+    QSslConfiguration sslConfig = m_webSocket->sslConfiguration();
+    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // 核心：不验证服务器证书
+    sslConfig.setProtocol(QSsl::AnyProtocol);
+    m_webSocket->setSslConfiguration(sslConfig);
+
+    // 额外保险：如果发生 SSL 错误，强制忽略
+    connect(m_webSocket, &QWebSocket::sslErrors, this, [=](const QList<QSslError>& errors){
+        qDebug() << "⚠️ 捕获到 SSL 错误 (已忽略):" << errors.first().errorString();
+        m_webSocket->ignoreSslErrors();
+    });
+    // ================== 【新增代码结束】 ==================
+
+
+    // 打开新连接
     m_webSocket->open(QUrl(wsUrl));
 }
 
 void ComfyApiService::queuePrompt(const QJsonObject& workflow)
 {
-    // 1. 构造请求 URL: http://127.0.0.1:8188/prompt
-    QUrl url(m_serverAddress + "/prompt");
+    // 修改这里：使用 m_apiBaseUrl
+    QUrl url(m_apiBaseUrl + "/prompt");
     QNetworkRequest request(url);
 
-    // 2. 设置头信息 (告诉服务器我们要发 JSON)
+    // ... 下面的代码保持不变 ...
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    // 3. 构造发送的数据包
-    // ComfyUI 要求格式: { "prompt": { ...工作流节点... } }
     QJsonObject payload;
     payload["prompt"] = workflow;
-    // client_id 最好加上，用于区分是谁发的，这里暂时先不加，后面再完善
-
-    // 【修改 3】告诉服务器：这个任务是 m_clientId 发起的
-    // 这样服务器执行完后，就会把 executed 消息发回给这个 ID 对应的 WebSocket
     payload["client_id"] = m_clientId;
-
     QByteArray data = QJsonDocument(payload).toJson();
 
-    qDebug() << "Posting prompt (Client ID:" << m_clientId << ")...";
+    qDebug() << "Posting prompt to:" << url.toString(); // 方便调试
     QNetworkReply* reply = m_networkManager->post(request, data);
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);          // 防止编译器警告“未使用的变量”
+        reply->ignoreSslErrors();  // 强制忽略错误
+    });
 
     connect(reply, &QNetworkReply::finished, this, &ComfyApiService::onPostFinished);
 }
@@ -1628,7 +1665,7 @@ void ComfyApiService::onTextMessageReceived(const QString &message)
 
 void ComfyApiService::getImage(const QString& filename, const QString& subfolder, const QString& type, const QString& promptId)
 {
-    QUrl url(m_serverAddress + "/view");
+    QUrl url(m_apiBaseUrl + "/view");
     QUrlQuery query;
     query.addQueryItem("filename", filename);
     query.addQueryItem("subfolder", subfolder);
@@ -1637,6 +1674,12 @@ void ComfyApiService::getImage(const QString& filename, const QString& subfolder
 
     QNetworkRequest request(url);
     QNetworkReply* reply = m_networkManager->get(request);
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);
+        reply->ignoreSslErrors();
+    });
 
     // 【关键】把 ID 和 文件名 存入 reply 的属性中，以便回调时使用
     reply->setProperty("promptId", promptId);
@@ -1700,7 +1743,7 @@ void ComfyApiService::uploadImage(const QString& localPath)
     multiPart->append(imagePart);
 
     // 3. 构造请求 URL: http://ip:port/upload/image
-    QUrl url(m_serverAddress + "/upload/image");
+    QUrl url(m_apiBaseUrl + "/upload/image");
     QNetworkRequest request(url);
 
     qDebug() << "📤 正在上传图片:" << localPath;
@@ -1708,6 +1751,12 @@ void ComfyApiService::uploadImage(const QString& localPath)
     // 4. 发送 POST
     QNetworkReply* reply = m_networkManager->post(request, multiPart);
     multiPart->setParent(reply); // 让 reply 管理 multiPart 的生命周期
+
+    // 【修改为 Lambda 写法】
+    connect(reply, &QNetworkReply::sslErrors, reply, [reply](const QList<QSslError> &errors){
+        Q_UNUSED(errors);
+        reply->ignoreSslErrors();
+    });
 
     // 5. 处理结果
     connect(reply, &QNetworkReply::finished, this, [=](){
@@ -1786,7 +1835,7 @@ public:
      * @param address 服务器地址
      * @param port 服务器端口
      */
-    void connectToHost(const QString& address, int port);
+    void connectToHost(const QString& baseUrl);
 
     /**
      * @brief 发送提示词生成任务
@@ -1848,7 +1897,7 @@ private slots:
 private:
     QNetworkAccessManager* m_networkManager; ///< HTTP网络管理器
     QWebSocket* m_webSocket; ///< WebSocket连接
-    QString m_serverAddress; ///< 服务器地址
+    QString m_apiBaseUrl;
     // 【新增】记录当前的任务ID，用于匹配
     QString m_currentPromptId;
     QString m_clientId;
@@ -1901,6 +1950,7 @@ private:
 #include <QStandardPaths>
 #include <QDir>
 #include <QDateTime>
+#include <QSettings>
 
 /**
  * @brief 构造函数
@@ -2104,17 +2154,42 @@ void MainWindow::setupUi()
     // API服务初始化
     // ---------------------------------------------------------
 
-    // 初始化服务
+    // --- 找到最后初始化 m_apiService 的地方 ---
+
     m_apiService = new ComfyApiService(this);
 
-    // 监听连接状态 (为了测试)
-    connect(m_apiService, &ComfyApiService::serverConnected, this, [](){
-        qDebug() << "主窗口收到消息：ComfyUI 连接成功！✅";
+    // 1. 连接成功 -> 解锁并恢复文字
+    connect(m_apiService, &ComfyApiService::serverConnected, this, [this](){
+        this->setWindowTitle("CloudArt - 已连接 ✅");
+        m_inputPanel->setConnectionStatus(true); // <--- 调用这里
     });
 
-    // 尝试连接本地 ComfyUI (默认端口 8000)
-    // 确保你的 ComfyUI 已经启动了！
-    m_apiService->connectToHost("127.0.0.1", 8000);
+    // 2. 连接断开 -> 锁定并提示未连接
+    connect(m_apiService, &ComfyApiService::serverDisconnected, this, [this](){
+        this->setWindowTitle("CloudArt - 未连接 ❌");
+        m_inputPanel->setConnectionStatus(false); // <--- 调用这里
+    });
+
+    // 3. 错误 -> 锁定
+    connect(m_apiService, &ComfyApiService::errorOccurred, this, [this](const QString& msg){
+        this->setWindowTitle("CloudArt - 连接失败 ⚠️");
+        m_inputPanel->setConnectionStatus(false); // <--- 调用这里
+    });
+
+    // 初始状态锁住
+    m_inputPanel->setConnectionStatus(false);
+
+    // 【新增】连接侧边栏的“设置按钮”
+    connect(m_sidebarControl->settingsBtn(), &QToolButton::clicked, this, [this](){
+        SettingsDialog dlg(this);
+        if (dlg.exec() == QDialog::Accepted) {
+            // 如果用户点了确定，就重新读取配置并连接
+            loadAndConnect();
+        }
+    });
+
+    // 启动时，自动读取配置并连接
+    loadAndConnect();
 
     // =========================================================
     // 【核心逻辑 1】任务提交成功，服务器返回了 ID
@@ -2859,6 +2934,25 @@ void MainWindow::loadSessionHistory(int sessionId)
     QTimer::singleShot(100, this, [this](){ m_chatArea->scrollToBottom(); });
 }
 
+// 【新增函数的实现】
+void MainWindow::loadAndConnect()
+{
+    QSettings settings("CloudArt", "AppConfig");
+    QString url = settings.value("Server/Url", "http://127.0.0.1:8000").toString();
+
+    if (url.isEmpty()) return;
+
+    // 【新增】立即更新 UI 状态为正在连接
+    this->setWindowTitle("CloudArt - 正在连接... 🔄");
+    qDebug() << "正在尝试连接服务器:" << url;
+
+    m_inputPanel->setConnectionStatus(false);
+
+    if (m_apiService) {
+        m_apiService->connectToHost(url);
+    }
+}
+
 
 --- 文件结束: src\Ui\MainWindow.cpp ---
 
@@ -2885,6 +2979,7 @@ void MainWindow::loadSessionHistory(int sessionId)
 #include "../Model/WorkflowTypes.h"
 #include "../Network/ComfyApiService.h"
 #include "../Database/DatabaseManager.h"
+#include "Components/SettingsDialog.h"
 
 
 // --- 前向声明 (Forward Declarations) ---
@@ -2963,6 +3058,8 @@ private slots:
 
     // 【新增】处理反推按钮点击
     void onInterrogateClicked();
+
+    void loadAndConnect();
 
 protected:
     /**
@@ -4520,6 +4617,33 @@ void InputPanel::setLocked(bool locked)
     m_btnGenerate->setEnabled(enabled);
 }
 
+void InputPanel::setConnectionStatus(bool isConnected)
+{
+    // 1. 复用 setLocked 的逻辑来 禁用/启用 按钮
+    // 如果 isConnected 为 false (未连接)，则 locked 为 true (锁定)
+    // 但这里我们需要手动处理，因为 setLocked 会改文字，所以我们手动设 enabled
+
+    bool enable = isConnected;
+
+    m_btnGenerate->setEnabled(enable);
+    m_btnWorkflow->setEnabled(enable);
+    m_btnRef->setEnabled(enable);
+    m_inputEdit->setEnabled(enable);
+
+    if (m_btnInterrogate) m_btnInterrogate->setEnabled(enable);
+    // 注意：比例按钮在文生图模式下才启用，这里简单处理， updateState 会自动修正
+    if (m_btnRatio) m_btnRatio->setEnabled(enable);
+
+    // 2. 【关键】设置专属的提示文字
+    if (isConnected) {
+        m_inputEdit->setPlaceholderText("输入提示词... (Shift+Enter 换行)");
+        m_btnGenerate->setText("生成");
+    } else {
+        m_inputEdit->setPlaceholderText("⚠️ 未连接服务器，请点击左下角设置进行连接...");
+        m_btnGenerate->setText("未连接");
+    }
+}
+
 
 --- 文件结束: src\Ui\Components\InputPanel.cpp ---
 
@@ -4599,6 +4723,9 @@ public:
 
     // 【新增】锁定/解锁面板所有控件
     void setLocked(bool locked);
+
+    // 【新增】设置连接状态 (专门用于网络断开时的锁定)
+    void setConnectionStatus(bool isConnected);
 
 signals:
     /**
@@ -5657,42 +5784,38 @@ private:
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 #include <QLabel>
-#include <QSettings>
+#include <QSettings> // 必须引用这个
 
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
-    setWindowTitle("服务器连接设置");
-    setFixedSize(350, 180); // 稍微宽一点，方便粘贴长链接
+    setWindowTitle("服务器设置");
+    setFixedSize(400, 200); // 稍微改大一点
 
-    // 读取配置，默认值设为本地
+    // 1. 读取保存的配置 (如果没有保存过，默认就是本地 8000)
     QSettings settings("CloudArt", "AppConfig");
-    QString savedUrl = settings.value("Server/Url", "http://127.0.0.1:8188").toString();
+    QString savedUrl = settings.value("Server/Url", "http://127.0.0.1:8000").toString();
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-    // 1. 输入区域
-    QVBoxLayout* inputLayout = new QVBoxLayout();
-    QLabel* lbl = new QLabel("服务器链接:", this);
-    lbl->setStyleSheet("font-weight: bold;");
-
+    // 输入框
+    QLabel* lbl = new QLabel("地址:", this);
     m_editUrl = new QLineEdit(savedUrl, this);
     m_editUrl->setPlaceholderText("例如: http://frp-fly.top:12345");
 
-    inputLayout->addWidget(lbl);
-    inputLayout->addWidget(m_editUrl);
-    mainLayout->addLayout(inputLayout);
+    mainLayout->addWidget(lbl);
+    mainLayout->addWidget(m_editUrl);
 
-    // 2. 提示文字
-    QLabel* tip = new QLabel("提示：\n1. 本地请填 http://127.0.0.1:8188\n2. 远程请直接粘贴樱花穿透/Cpolar生成的完整链接。", this);
-    tip->setStyleSheet("color: #888; font-size: 12px; margin-top: 10px;");
+    // 提示信息
+    QLabel* tip = new QLabel("复制完整的穿透链接填入", this);
+    tip->setStyleSheet("color: #666; font-size: 12px; margin-top: 5px;");
     tip->setWordWrap(true);
     mainLayout->addWidget(tip);
 
     mainLayout->addStretch();
 
-    // 3. 按钮
+    // 按钮
     QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, [=](){
-        // 保存配置
+        // 【关键】点击确定时，保存配置
         QSettings settings("CloudArt", "AppConfig");
         settings.setValue("Server/Url", m_editUrl->text().trimmed());
         accept();
@@ -5743,6 +5866,7 @@ SidebarControl::SidebarControl(QWidget* parent)
     , m_layout(nullptr)
     , m_toggleBtn(nullptr)
     , m_historyBtn(nullptr)
+    , m_settingsBtn(nullptr)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     
@@ -5756,8 +5880,17 @@ SidebarControl::SidebarControl(QWidget* parent)
     m_layout->addWidget(m_toggleBtn);
     m_layout->addWidget(m_historyBtn);
     
-    setFixedWidth(40);
+    // 【新增】添加一个弹簧，把设置按钮顶到最底部
+    m_layout->addStretch();
 
+    // 【新增】创建设置按钮
+    // 注意：这里暂时复用 'HideConversation.png' 图标，你可以以后换成齿轮图标
+    m_settingsBtn = createBtn(":/images/setting.png", "服务器设置");
+
+    // 如果想区分，可以暂时给它变个色或者样式，这里先保持一致
+    m_layout->addWidget(m_settingsBtn);
+
+    setFixedWidth(40);
     adjustSize();
 }
 
@@ -5803,6 +5936,11 @@ QToolButton* SidebarControl::createBtn(const QString& iconPath, const QString& t
     return btn;
 }
 
+QToolButton* SidebarControl::settingsBtn() const
+{
+    return m_settingsBtn;
+}
+
 
 --- 文件结束: src\Ui\Components\SidebarControl.cpp ---
 
@@ -5826,6 +5964,8 @@ public:
     QToolButton* toggleBtn() const;
     QToolButton* historyBtn() const;
     void updateToggleState(bool isExpanded);
+    // 【新增】获取设置按钮的指针
+    QToolButton* settingsBtn() const;
 
 private:
     QToolButton* createBtn(const QString& iconPath, const QString& tooltip);
@@ -5833,6 +5973,8 @@ private:
     QVBoxLayout* m_layout;
     QToolButton* m_toggleBtn;
     QToolButton* m_historyBtn;
+    // 【新增】设置按钮变量
+    QToolButton* m_settingsBtn;
 };
 
 
